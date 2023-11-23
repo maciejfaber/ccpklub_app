@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container mt-5">
+    <h1>Formularz kontaktowy</h1>
+
+    {% if message_sent %}
+      <div class="alert alert-success mt-3 text-center" role="alert">
+        Wiadomość została wysłana!
+      </div>
+    {% endif %}
+
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="form-floating col-md-6">
+        <input type="email" placeholder="Adres email" class="form-control" id="inputEmail" name="email" required>
+        <label for="inputEmail" class="form-label">Adres email</label>
+      </div>
+      <div class="form-floating col-md-6">
+        <input type="text" placeholder="Tytuł" class="form-control" id="inputtitle" name="title" required>
+        <label for="inputtitle" class="form-label">Tytuł</label>
+        {{ form.title.errors }}
+      </div>
+      <div class="form-floating col-md-6">
+        <input type="text" placeholder="Imię" class="form-control" id="inputfirst_name" name="first_name" required>
+        <label for="inputfirst_name" class="form-label">Imię</label>
+        {{ form.first_name.errors }}
+      </div>
+      <div class="col-12">
+        <label for="inputcontent" class="form-label">Treść</label>
+        <textarea class="form-control" placeholder="Zadaj pytanie lub opisz swój problem." id="inputcontent" name="content" rows="8"></textarea>
+
+      </div>
+      <button type="submit" class="btn btn-primary">Wyślij wiadomość</button>
+    </form>
+  </div>
+
+{% endblock %}

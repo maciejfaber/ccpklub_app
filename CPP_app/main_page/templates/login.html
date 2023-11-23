@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="d-flex justify-content-center">
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        <div class="form-floating mb-4 mt-5">
+            <input type="text" id="UsernameForm" name="username" placeholder="Nazwa użytkownika" class="form-control {% if messages %}is-invalid{% endif %}" />
+            <label class="form-label" for="UsernameForm">Nazwa użytkownika</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="password" id="PasswordForm" name="password" placeholder="Hasło" class="form-control {% if messages %}is-invalid{% endif %}" />
+            <label class="form-label" for="PasswordForm">Hasło</label>
+        </div>
+        </div>
+    <div class="d-flex justify-content-center">
+        {% if messages %}
+            {% for message in messages %}
+                <p {% if message.tags %} class="{{ message.tags }} alert alert-warning"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+        <div class="d-flex justify-content-center">
+        <button type="submit" class="btn btn-primary btn-block mb-4 mt-1 mx-auto">Zaloguj się</button>
+        </div>
+    </form>
+
+    <div class="d-flex justify-content-center ">
+        <p>Chcesz do nas dołączyć? <a href="{% url 'register' %}">Zarejestruj się</a></p>
+    </div>
+{% endblock %}

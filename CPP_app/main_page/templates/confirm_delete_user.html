@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Czy na pewno chcesz usunąć użytkownika: {{ user.username }}?</h2>
+<form method="post" action="{% url 'confirm_delete_user' user_id=user.id %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Usuń</button>
+</form>
+{% endblock %}

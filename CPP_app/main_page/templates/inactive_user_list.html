@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Użytkownicy oczekujący na zaakceptowanie</h2>
+<ul>
+    {% for user in inactive_users %}
+        <li><a href="{% url 'user_details' user.id %}">{{ user.username }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

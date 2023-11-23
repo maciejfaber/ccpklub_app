@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odpowiedź na formularz kontaktowy</title>
+</head>
+<body>
+    <h1>Witaj, {{ original_message.first_name }}</h1>
+    <p>W dniu {{ original_message.timestamp }} został wysłany formularz kontaktowy o treści:</p>
+    <p>{{ original_message.content }}</p><br><br>
+    <p><b>Oto odpowiedź:</b></p>
+    <p>{{ content }}</p>
+</body>
+</html>

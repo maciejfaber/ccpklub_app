@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Detale użytkownika: {{ user.username }}</h2>
+    <p>Data dołączenia: {{ user.date_joined }}</p>
+    <p>Numer telefonu: {{ user.phone_number }}</p>
+    <p>Miejscowość: {{ user.town }}</p>
+    <p>Kod pocztowy: {{ user.postal_code }}</p>
+    <p>Numer rejestracyjny: {{ user.registration_number }}</p>
+    <p>Rola: {{ user.get_role_display }}</p>
+    <p>Ankieta: {{ user.questionnaire }}</p>
+    <form method="post" action="{% url 'user_details' user.id %}">
+    {% csrf_token %}
+    <button type="submit" name="action" value="accept">Zaakceptuj</button>
+    <button type="submit" name="action" value="delete">Usuń</button>
+</form>
+{% endblock %}

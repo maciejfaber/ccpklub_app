@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1>Odpowiedz na wiadomość</h1>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title"><b>Tytuł:</b> {{ original_message.title }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text"><b>Imię:</b> {{ original_message.first_name }}</p>
+                <p class="card-text"><b>Treść:</b> {{ original_message.content }}</p>
+            </div>
+        </div>
+
+        <div class="card ">
+            <div class="card-body">
+                <form method="post" action="{% url 'reply_or_detail_message' original_message.id %}">
+                    {% csrf_token %}
+                    <div class="form-floating col-md-6">
+                        <input type="text" placeholder="Tytuł" class="form-control" id="inputtitle" name="title" required>
+                        <label for="inputtitle" class="form-label">Tytuł</label>
+                    </div>
+                    <div class="col-12">
+                        <label for="inputcontent" class="form-label">Odpowiedź:</label>
+                        <textarea class="form-control" placeholder="Odpowiedz na wiadomość." id="inputcontent" name="content" rows="8"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Odpowiedz</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

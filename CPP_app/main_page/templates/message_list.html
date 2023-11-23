@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Lista wiadomości (Nieodebrane: {{ unread_messages_count }} / Wszystkie: {{ total_messages_count }})</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Imię</th>
+                <th>Email</th>
+                <th>Tytuł</th>
+                <th>Data</th>
+                <th>Odpowiedź</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for message in messages %}
+                {% if message.reply_sent %}<tr class="table-success">{% else %}<tr class="table-warning">{% endif %}
+                    <td>{{ message.first_name }}</td>
+                    <td>{{ message.email }}</td>
+                    <td>{{ message.title }}</td>
+                    <td>{{ message.timestamp }}</td>
+                    <td>{% if message.reply_sent %}Tak{% else %}Nie{% endif %}</td>
+                    <td><a href="{% url 'reply_or_detail_message' message.id %}">Odpowiedz</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
