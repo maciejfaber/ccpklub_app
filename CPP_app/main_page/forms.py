@@ -1,6 +1,5 @@
 from django import forms
-from captcha.fields import ReCaptchaField
-from .models import News, User, Message, Pig
+from .models import News, User, Message
 from datetime import date
 from django.contrib.auth.forms import UserCreationForm
 import datetime
@@ -9,56 +8,59 @@ import re
 
 
 class NewsForm(forms.ModelForm):
-    #captcha = ReCaptchaField()
-
     class Meta:
         model = News
         fields = ['title', 'content', 'photo']
 
 
 class ContactForm(forms.ModelForm):
-    #captcha = ReCaptchaField()
-
     class Meta:
         model = Message
         fields = ['title', 'first_name', 'email', 'content']
 
 
+class RegistrationAsForm(forms.Form):
+    registration_type = forms.ChoiceField(
+        choices=[
+            ('member', 'Hodowca lub Miłośnik'),
+            ('exhibitor', 'Wystawca')
+        ],
+        label="Wybierz rodzaj rejestracji",
+    )
+
+
 class CustomUserCreationForm(UserCreationForm):
     cur_year = datetime.datetime.today().year
     year_range = tuple([i for i in range(cur_year - 90, cur_year - 10)])
-    
+    ROLE_CHOICES = [
+        ('MI', 'Miłośnik'),
+        ('HP', 'Hodowca Polski'),
+        ('HZ', 'Hodowca Zagraniczny')
+    ]
+
     birthdate = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range))
     phone_number = forms.CharField(max_length=15, label="Numer telefonu")
     town = forms.CharField(max_length=100, label="Miejscowość")
     postal_code = forms.CharField(max_length=10, label="Kod pocztowy")
-    registration_number = forms.CharField(max_length=20, widget=forms.HiddenInput(),  required=False)
-    role = forms.ChoiceField(choices=User.ROLE_CHOICES, label="Członek")
+    role = forms.ChoiceField(choices=ROLE_CHOICES, label="Członek")
     questionnaire = forms.CharField(widget=forms.Textarea, label="Ankieta", required=True)
-    
+    country = forms.ChoiceField(choices=User.COUNTRY_CHOICES, label="Państwo")
     first_name = forms.CharField(max_length=30, required=True, label="Imię")
     last_name = forms.CharField(max_length=30, required=True, label="Nazwisko")
     email = forms.EmailField(required=True, label="Adres email")
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if email:
-            user_exists = get_user_model().objects.filter(email=email).exists()
-            if user_exists:
-                raise forms.ValidationError("Użytkownik z tym adresem e-mail już istnieje.")
-        return email
-
     def save(self, commit=True):
         user = super().save(commit=False)
         user.username = self.generate_username(self.cleaned_data.get('first_name'), self.cleaned_data.get('last_name'))
-        user.registration_number = self.generate_registration_number()
         user.is_active = False
+        user.club = 'PL'
+
         if not user.last_edit_date:
             user.last_edit_date = user.date_joined
         if commit:
             user.save()
         return user
-        
+
     @staticmethod
     def generate_username(first_name, last_name):
         first_name = first_name.lower()
@@ -77,6 +79,21 @@ class CustomUserCreationForm(UserCreationForm):
             num += 1
 
         return username
+
+    class Meta:
+        model = get_user_model()
+        fields = [f for f in UserCreationForm.Meta.fields if f != 'username'] + [
+            'role', 'first_name', 'last_name',
+            'email', 'birthdate', 'phone_number',
+            'country', 'town', 'postal_code', 'questionnaire']
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            user_exists = get_user_model().objects.filter(email=email).exists()
+            if user_exists:
+                raise forms.ValidationError("Użytkownik z tym adresem e-mail już istnieje.")
+        return email
 
     def clean_birthdate(self):
         birthdate = self.cleaned_data.get('birthdate')
@@ -140,26 +157,84 @@ class CustomUserCreationForm(UserCreationForm):
         return postal_code
 
 
+class ExhibitorCreationForm(UserCreationForm):
+    cur_year = datetime.datetime.today().year
+    year_range = tuple([i for i in range(cur_year - 90, cur_year - 10)])
+    EX_CHOICES = [
+        ('WZ', 'Wystawca Zagraniczny'),
+        ('WD', 'Wystawca standardu D')
+    ]
+    birthdate = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
+    phone_number = forms.CharField(max_length=15, label="Numer telefonu", required=False)
+    town = forms.CharField(max_length=100, label="Miejscowość", required=False)
+    postal_code = forms.CharField(max_length=10, label="Kod pocztowy", required=False)
+    role = forms.ChoiceField(choices=EX_CHOICES, label="Członek")
+    club = forms.ChoiceField(choices=User.CLUB_CHOICES, label="Klub")
+    country = forms.ChoiceField(choices=User.COUNTRY_CHOICES, label="Państwo")
+    first_name = forms.CharField(max_length=30, required=True, label="Imię")
+    last_name = forms.CharField(max_length=30, required=True, label="Nazwisko")
+    email = forms.EmailField(required=True, label="Adres email")
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.username = self.generate_username(self.cleaned_data.get('first_name'), self.cleaned_data.get('last_name'))
+        user.is_active = False
+
+        if not user.last_edit_date:
+            user.last_edit_date = user.date_joined
+        if commit:
+            user.save()
+        return user
+
     @staticmethod
-    def generate_registration_number():
-        current_year = date.today().year
-        last_user = (User.objects.filter(registration_number__startswith=f'CCP/M/{current_year}/')
-                     .order_by('-registration_number').first())
-        if last_user:
-            last_number = int(last_user.registration_number.split('/')[-1])
-            new_number = str(last_number + 1).zfill(3)
+    def generate_username(first_name, last_name):
+        first_name = first_name.lower()
+        last_name = last_name.lower()
 
-        else:
-            new_number = '001'
+        if ' ' in first_name:
+            first_name = '_'.join(first_name.split())
+        if ' ' in last_name:
+            last_name = '_'.join(last_name.split())
 
-        return f'CCP/M/{current_year}/{new_number}'
+        username = f"{first_name}.{last_name}"
+        num = 1
+
+        while User.objects.filter(username=username).exists():
+            username = f"{first_name}.{last_name}{num}"
+            num += 1
+
+        return username
 
     class Meta:
         model = get_user_model()
         fields = [f for f in UserCreationForm.Meta.fields if f != 'username'] + [
-            'role', 'first_name', 'last_name', 
-            'email', 'birthdate', 'phone_number', 
-            'town', 'postal_code', 'questionnaire']
+            'role', 'club', 'first_name', 'last_name',
+            'email', 'birthdate', 'phone_number',
+            'country', 'town', 'postal_code']
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            user_exists = get_user_model().objects.filter(email=email).exists()
+            if user_exists:
+                raise forms.ValidationError("Użytkownik z tym adresem e-mail już istnieje.")
+        return email
+
+    def clean_first_name(self):
+        first_name = self.cleaned_data.get('first_name')
+        if not first_name.isalpha():
+            raise forms.ValidationError("Imię może zawierać tylko litery.")
+        if not first_name.istitle():
+            raise forms.ValidationError("Imię musi zaczynać się z wielkiej litery.")
+        return first_name
+
+    def clean_last_name(self):
+        last_name = self.cleaned_data.get('last_name')
+        if not last_name.isalpha():
+            raise forms.ValidationError("Nazwisko może zawierać tylko litery.")
+        if not last_name.istitle():
+            raise forms.ValidationError("Nazwisko musi zaczynać się z wielkiej litery.")
+        return last_name
 
 
 class ConfirmDeleteUserForm(forms.Form):

@@ -83,7 +83,22 @@
       </div>
       {% endif %}
     </div>
-    <div class="form-floating col-md-6">
+    <div class="col-md-4">
+      <select class="form-select {% if form.errors.country %}is-invalid{% endif %}" id="inputCountry" name="country" value="{{ form.data.country }}" required>
+        <option value="" selected disabled>Państwo</option>
+        {% for value, label in form.country.field.choices %}
+            <option value="{{ value }}" {% if value == form.country.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.country %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.country %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-4">
       <input type="text" placeholder="Miejscowość" class="form-control  {% if form.errors.town %}is-invalid{% endif %}" id="inputTown" name="town" value="{{ form.data.town }}" required>
       <label for="inputTown" class="form-label">Miejscowość</label>
       {% if form.errors.town %}
@@ -94,7 +109,7 @@
       </div>
       {% endif %}
     </div>
-    <div class="form-floating col-md-6">
+    <div class="form-floating col-md-4">
       <input type="text" placeholder="Kod pocztowy" class="form-control {% if form.errors.postal_code %}is-invalid{% endif %}" id="inputPostalCode" name="postal_code" value="{{ form.data.postal_code }}" required>
       <label for="inputPostalCode" class="form-label">Kod pocztowy</label>
       {% if form.errors.postal_code %}

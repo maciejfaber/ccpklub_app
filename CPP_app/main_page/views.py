@@ -1,8 +1,9 @@
+from datetime import date
 from django.http import HttpResponse
 from django.template import loader
 from .models import News, User, Message
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import NewsForm, CustomUserCreationForm, ConfirmDeleteUserForm, ContactForm, ReplyForm
+from .forms import NewsForm, CustomUserCreationForm, ConfirmDeleteUserForm, ContactForm, ReplyForm, RegistrationAsForm, ExhibitorCreationForm
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -63,6 +64,22 @@ def add_news(request):
 
 
 @not_login_required
+def register_as(request):
+    if request.method == 'POST':
+        registration_type_form = RegistrationAsForm(request.POST)
+        if registration_type_form.is_valid():
+            registration_type = registration_type_form.cleaned_data['registration_type']
+            if registration_type == 'member':
+                return redirect('register')
+            else:
+                return redirect('exhibitor_register')
+    else:
+        registration_type_form = RegistrationAsForm()
+
+    return render(request, 'register_as.html', {'registration_type_form': registration_type_form})
+
+
+@not_login_required
 def register(request):
     message_sent = False
     email = None
@@ -74,8 +91,22 @@ def register(request):
             message_sent = True
     else:
         form = CustomUserCreationForm()
-
     return render(request, 'register.html', {'form': form, 'message_sent': message_sent, 'email': email})
+
+
+@not_login_required
+def exhibitor_register(request):
+    message_sent = False
+    email = None
+    if request.method == 'POST':
+        form = ExhibitorCreationForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            form.save()
+            message_sent = True
+    else:
+        form = ExhibitorCreationForm()
+    return render(request, 'exhibitor_register.html', {'form': form, 'message_sent': message_sent, 'email': email})
 
 
 @not_login_required
@@ -118,6 +149,20 @@ class InactiveUserListView(View):
 
 class UserDetailsView(View):
     template_name = 'user_details.html'
+
+    @staticmethod
+    def generate_registration_number():
+        current_year = date.today().year
+        last_user = (User.objects.filter(registration_number__startswith=f'CCP/M/{current_year}/')
+                     .order_by('-registration_number').first())
+        if last_user:
+            last_number = int(last_user.registration_number.split('/')[-1])
+            new_number = str(last_number + 1).zfill(3)
+
+        else:
+            new_number = '001'
+
+        return f'CCP/M/{current_year}/{new_number}'
 
     def get(self, request, user_id):
         user = get_object_or_404(User, id=user_id)

@@ -20,7 +20,7 @@ class CustomUserAdmin(UserAdmin):
         ('Personal Info', {'fields': ('first_name', 'last_name', 'email',
                                       'registration_number', 'birthdate',
                                       'phone_number', 'town', 'postal_code',
-                                      'role', 'questionnaire')}),
+                                      'country', 'role', 'club', 'questionnaire')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined', 'last_edit_date')}),
     )

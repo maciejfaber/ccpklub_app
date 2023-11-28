@@ -19,13 +19,77 @@ class User(AbstractUser):
         ('MI', 'Miłośnik'),
         ('HP', 'Hodowca Polski'),
         ('HZ', 'Hodowca Zagraniczny'),
+        ('WZ', 'Wystawca Zagraniczny'),
+        ('WD', 'Wystawca standardu D')
     ]
-    birthdate = models.DateField(null=True, blank=False)
-    phone_number = models.CharField(max_length=15, null=True, blank=False)
-    town = models.CharField(max_length=100, null=True, blank=False)
-    postal_code = models.CharField(max_length=10, null=True, blank=False)
+    CLUB_CHOICES = [
+        ('PL', 'Polska (CCP)'),
+        ('PET', 'Wystawca standardu D - Brak klubu'),
+        ('SOCHM', 'Czech Republic (SOCHM)'),
+        ('SZOCHVM', 'Czech Republic (SZOCHVM)'),
+        ('SK', 'Slovakia'),
+        ('UA', 'Ukraine'),
+        ('SE', 'Sweden'),
+        ('DMK', 'Denmark (DMK)'),
+        ('DMF', 'Denmark (DMF)'),
+        ('FI', 'Finland'),
+        ('NMK', 'Norway (NMK)'),
+        ('NMF', 'Norway (NMF)'),
+        ('GB', 'Great Britain'),
+        ('MFD', 'Germany (MFD)'),
+        ('OMNC', 'Germany (OMNC)'),
+        ('NL', 'Netherlands'),
+        ('FAEC', 'France (FAEC)'),
+        ('CCF', 'France (CCF)'),
+        ('CH', 'Switzerland'),
+        ('BE', 'Belgium'),
+        ('AT', 'Austria'),
+        ('IT', 'Italy'),
+        ('ES', 'Spain'),
+        ('PT', 'Portugal'),
+        ('IE', 'Ireland'),
+        ('SI', 'Slovenia'),
+        ('HU', 'Hungary'),
+        ('USA', 'USA'),
+        ('CA', 'Canada'),
+        ('AU', 'Australia'),
+        ('NZ', 'New Zealand'),
+    ]
+    COUNTRY_CHOICES = [
+        ('PL', 'Polska'),
+        ('CZ', 'Czech Republic'),
+        ('SK', 'Slovakia'),
+        ('UA', 'Ukraine'),
+        ('SE', 'Sweden'),
+        ('DK', 'Denmark'),
+        ('FI', 'Finland'),
+        ('NO', 'Norway'),
+        ('GB', 'Great Britain'),
+        ('DE', 'Germany'),
+        ('NL', 'Netherlands'),
+        ('FR', 'France'),
+        ('CH', 'Switzerland'),
+        ('BE', 'Belgium'),
+        ('AT', 'Austria'),
+        ('IT', 'Italy'),
+        ('ES', 'Spain'),
+        ('PT', 'Portugal'),
+        ('IE', 'Ireland'),
+        ('SI', 'Slovenia'),
+        ('HU', 'Hungary'),
+        ('USA', 'USA'),
+        ('CA', 'Canada'),
+        ('AU', 'Australia'),
+        ('NZ', 'New Zealand'),
+    ]
+    birthdate = models.DateField(null=True, blank=True)
+    phone_number = models.CharField(max_length=15, null=True, blank=True)
+    country = models.CharField(max_length=20, choices=COUNTRY_CHOICES, blank=True)
+    town = models.CharField(max_length=100, null=True, blank=True)
+    postal_code = models.CharField(max_length=10, null=True, blank=True)
     registration_number = models.CharField(max_length=20, null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, blank=False)
+    club = models.CharField(max_length=10, choices=CLUB_CHOICES, blank=True)
     questionnaire = models.TextField(default="")
     last_edit_date = models.DateTimeField(null=True, blank=True)
 
@@ -91,7 +155,7 @@ class Pig(models.Model):
     ]
 
     name = models.CharField(max_length=150, null=False, blank=False)
-    nickname = models.CharField(max_length=150, null=False, blank=False)
+    nickname = models.CharField(max_length=150, null=False, blank=True)
     sex = models.CharField(max_length=6, choices=SEX_CHOICE, default='Samiec', blank=False, null=False)
     birth_date = models.DateField(default=timezone.now, blank=True, null=True)
     birth_weight = models.IntegerField(null=True, blank=True)
@@ -101,7 +165,7 @@ class Pig(models.Model):
                                default=None, related_name='PIG_father')
     mother = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
                                default=None, related_name='PIG_mother')
-    colors = models.CharField(max_length=200, null=False, blank=False)
+    colors = models.CharField(max_length=200, null=True, blank=True)
     eye_color = models.CharField(max_length=50, null=True, blank=True)
     registration_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     litter = models.ForeignKey('Litter', null=True, blank=True, on_delete=models.PROTECT,
