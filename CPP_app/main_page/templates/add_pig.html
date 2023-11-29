@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Dodaj świnkę</h2>
+  <form method="post" class="row g-3">
+    {% csrf_token %}
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.name %}is-invalid{% endif %}" id="inputName" name="name" value="{{ form.data.name }}" required>
+      <label for="inputName" class="form-label">Imię</label>
+      {% if form.errors.name %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.name %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.colors %}is-invalid{% endif %}" id="inputColors" name="colors" value="{{ form.data.colors }}" required>
+      <label for="inputColors" class="form-label">Kolor</label>
+        {% if form.errors.colors %}
+          <div class="text-danger">
+            {% for error in form.errors.colors %}
+            {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birth_date %}is-invalid{% endif %}" id="inputBirt_hdate" name="birth_date" value="{{ form.data.birt_hdate }}" min="{{ min_date }}" max="{{ max_date }}">
+      <label for="inputBirth_date" class="form-label">Data urodzenia</label>
+      {% if form.errors.birt_hdate %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.birth_date %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-6">
+  <select class="form-select {% if form.errors.sex %}is-invalid{% endif %}" id="inputSex" name="sex" value="{{ form.data.sex }}">
+    <option value="" selected disabled>Wybierz płeć świnki</option>
+    {% for value, label in form.sex.field.choices %}
+        <option value="{{ value }}" {% if value == form.sex.value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  {% if form.errors.sex %}
+    <div class="text-danger">
+      {% for error in form.errors.sex %}
+          {{ error }}
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+    <div class="col-12 mb-5 mt-5 text-center">
+      <button type="submit" class="btn btn-lg btn-primary">Dodaj świnkę</button>
+    </div>
+  </form>
+{% endblock %}

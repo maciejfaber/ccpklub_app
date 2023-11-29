@@ -1,5 +1,5 @@
 from django import forms
-from .models import News, User, Message
+from .models import News, User, Message, Pig, Breed
 from datetime import date
 from django.contrib.auth.forms import UserCreationForm
 import datetime
@@ -244,3 +244,31 @@ class ConfirmDeleteUserForm(forms.Form):
 class ReplyForm(forms.Form):
     title = forms.CharField(max_length=255, required=True)
     content = forms.CharField(widget=forms.Textarea, required=True)
+
+
+class PigForm(forms.ModelForm):
+    cur_year = datetime.datetime.today().year
+    year_range = tuple([i for i in range(cur_year - 10, cur_year+1)])
+
+    name = forms.CharField(max_length=150, label="Imię", required=True)
+    sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=True)
+    birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
+    colors = forms.CharField(max_length=200, label="Umaszczenie", required=True)
+    owner = forms.CharField(widget=forms.HiddenInput, required=False)
+
+    class Meta:
+        model = Pig
+        fields = ['name', 'sex', 'birth_date', 'colors']
+
+    def __init__(self, *args, **kwargs):
+        self.owner = kwargs.pop('owner', None)
+        super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        pig = super().save(commit=False)
+        pig.breed = Breed.objects.get(name="Pupil - świnka bez rodowodu")
+        pig.is_active = True
+        pig.owner = User.objects.get(id=self.owner)
+        if commit:
+            pig.save()
+        return pig

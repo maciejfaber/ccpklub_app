@@ -157,9 +157,10 @@ class Pig(models.Model):
     name = models.CharField(max_length=150, null=False, blank=False)
     nickname = models.CharField(max_length=150, null=False, blank=True)
     sex = models.CharField(max_length=6, choices=SEX_CHOICE, default='Samiec', blank=False, null=False)
-    birth_date = models.DateField(default=timezone.now, blank=True, null=True)
+    birth_date = models.DateField(blank=True, null=True)
     birth_weight = models.IntegerField(null=True, blank=True)
-    owner = models.CharField(max_length=200, null=True, blank=True)
+    owner = models.ForeignKey('User', null=True, blank=True, on_delete=models.SET_NULL,
+                              default=None, related_name="PIG_user")
     breed = models.ForeignKey('Breed', on_delete=models.PROTECT)
     father = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
                                default=None, related_name='PIG_father')

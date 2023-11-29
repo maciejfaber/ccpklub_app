@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from django.http import HttpResponse
 from django.template import loader
 from .models import News, User, Message
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import NewsForm, CustomUserCreationForm, ConfirmDeleteUserForm, ContactForm, ReplyForm, RegistrationAsForm, ExhibitorCreationForm
+from .forms import (NewsForm, CustomUserCreationForm, PigForm,
+                    ConfirmDeleteUserForm, ContactForm, ReplyForm,
+                    RegistrationAsForm, ExhibitorCreationForm)
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -49,18 +51,6 @@ def main(request):
         news_list = News.objects.all().order_by('-creation_date')
         context = {'news_list': news_list}
         return HttpResponse(template.render(context, request))
-
-
-@login_required(login_url='Main')
-def add_news(request):
-    if request.method == 'POST':
-        form = NewsForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('Main')
-    else:
-        form = NewsForm()
-    return render(request, 'add_news.html', {'form': form})
 
 
 @not_login_required
@@ -269,3 +259,32 @@ def reply_or_detail_message(request, message_id):
         form = ReplyForm()
 
     return render(request, 'reply_or_detail_message.html', {'form': form, 'original_message': original_message})
+
+
+@login_required()
+def add_pig(request):
+    min_date = datetime.now() - timedelta(days=10 * 365)
+    max_date = datetime.now()
+    if request.method == 'POST':
+        form = PigForm(request.POST, request.FILES, owner=request.user.id)
+        if form.is_valid():
+            form.save()
+            return redirect('Main')
+    else:
+        form = PigForm()
+
+    return render(request, 'add_pig.html', {'form': form,
+                                            'min_date': min_date.strftime('%Y-%m-%d'),
+                                            'max_date': max_date.strftime('%Y-%m-%d')})
+
+
+def add_news(request):
+    if request.method == 'POST':
+        form = NewsForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('Main')
+
+    else:
+        form = NewsForm()
+    return render(request, 'add_news.html', {'form': form})

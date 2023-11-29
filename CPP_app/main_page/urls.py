@@ -24,4 +24,5 @@ urlpatterns = [
     path('confirm_delete_user/<int:user_id>/', views.ConfirmDeleteUserView.as_view(), name='confirm_delete_user'),
     path('message_list/', views.message_list, name='message_list'),
     path('message/<int:message_id>/', views.reply_or_detail_message, name='reply_or_detail_message'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('add_pig/', views.add_pig, name='add_pig'),
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
