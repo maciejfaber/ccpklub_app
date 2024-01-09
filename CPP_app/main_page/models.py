@@ -118,6 +118,22 @@ class Breed(models.Model):
         return self.name
 
 
+class Color(models.Model):
+    name = models.CharField(max_length=150, unique=True, blank=False, null=False)
+    position = models.CharField(max_length=1, blank=False, null=False)
+
+    def __str__(self):
+        return self.name + ' ' + self.position
+
+
+class EyeColor(models.Model):
+    name = models.CharField(max_length=20, unique=True, blank=False, null=False)
+    polish_name = models.CharField(max_length=150, unique=False, blank=False, null=False)
+
+    def __str__(self):
+        return self.name
+
+
 class Breeding(models.Model):
     POSITION_CHOICES = [
         ('before', 'Before'),
@@ -153,25 +169,29 @@ class Pig(models.Model):
         ('Male', 'Samiec'),
         ('Female', 'Samica')
     ]
-
+    POSITION_CHOICES = [
+        ('Before', 'Before'),
+        ('After', 'After'),
+    ]
     name = models.CharField(max_length=150, null=False, blank=False)
     nickname = models.CharField(max_length=150, null=False, blank=True)
     sex = models.CharField(max_length=6, choices=SEX_CHOICE, default='Samiec', blank=False, null=False)
     birth_date = models.DateField(blank=True, null=True)
-    birth_weight = models.IntegerField(null=True, blank=True)
+    birth_weight = models.PositiveIntegerField(null=True, blank=True)
     owner = models.ForeignKey('User', null=True, blank=True, on_delete=models.SET_NULL,
                               default=None, related_name="PIG_user")
     breed = models.ForeignKey('Breed', on_delete=models.PROTECT)
     father = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
-                               default=None, related_name='PIG_father')
+                               default=None, related_name='PIG_father', limit_choices_to={'sex': 'Male'})
     mother = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
-                               default=None, related_name='PIG_mother')
+                               default=None, related_name='PIG_mother', limit_choices_to={'sex': 'Female'})
     colors = models.CharField(max_length=200, null=True, blank=True)
-    eye_color = models.CharField(max_length=50, null=True, blank=True)
+    eye_color = models.ForeignKey('EyeColor', null=True, blank=True, on_delete=models.PROTECT)
     registration_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     litter = models.ForeignKey('Litter', null=True, blank=True, on_delete=models.PROTECT,
                                default=None, related_name='PIG_litter')
     photo = models.ImageField(upload_to='zdjecia_swinek/zdjecia_uzytkownikow', null=True, blank=True)
+    nickname_position = models.CharField(max_length=6, choices=POSITION_CHOICES, default='After', blank=True, null=True)
     is_in_breeding = models.BooleanField(default=True)
     is_active = models.BooleanField(default=False)
 

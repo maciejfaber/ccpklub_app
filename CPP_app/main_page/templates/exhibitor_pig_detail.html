@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1>Szczegóły Świnki</h1>
+
+        <div>
+            <strong>{{ pig.name }} {{ pig.nickname }}</strong><br>
+            {% if pig.sex == " Male" %}
+                Płeć: Samiec<br>
+            {% else %}
+                Płeć: Samica<br>
+            {% endif %}
+            Rasa: {{ pig.breed.name }}<br>
+            Data urodzenia: {{ pig.birth_date }}<br>
+            Waga przy urodzeniu: {{ pig.birth_weight }}<br>
+            Umaszczenie: {{ pig.colors }}<br>
+            Kolor oczu: {{ pig.eye_color }}<br>
+            Numer rejestracyjny: {{ pig.registration_number }}<br>
+            Zdjęcie: {% if pig.photo %}<img src="{{ pig.photo.url }}" alt="Zdjęcie świnki">{% endif %}<br>
+            Status hodowlany: {% if pig.is_in_breeding %}Aktywna{% else %}Nieaktywna{% endif %}<br>
+            Status aktywności: {% if pig.is_active %}Aktywna{% else %}Nieaktywna{% endif %}<br>
+
+            <a href="{% url 'exhibitor_my_pigs' %}" class="btn btn-primary mt-3">Powrót do listy</a>
+
+            <form method="post" action="{% url 'exhibitor_pig_detail' pig.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="delete_pig_id" value="{{ pig.id }}">
+                <button type="submit" class="btn btn-danger">Usuń</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

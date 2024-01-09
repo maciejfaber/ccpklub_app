@@ -99,7 +99,11 @@
 									</a>
 									<ul class="dropdown-menu" aria-labelledby="userDropdown">
 										<li><a class="dropdown-item" href="{% url 'my_profile' %}">Moje dane</a></li>
-										<li><a class="dropdown-item" href="#">Moje Świnki</a></li>
+										{% if user.role == 'WD' or user.role == 'WZ' %}
+											<li><a class="dropdown-item" href="{% url 'exhibitor_my_pigs' %}">Moje Świnki</a></li>
+										{% else %}
+
+										{% endif %}
 										<li><a class="dropdown-item" href="{% url 'logout' %}">Wyloguj się</a></li>
 									</ul>
 								</li>

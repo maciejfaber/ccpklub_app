@@ -1,10 +1,60 @@
 from django import forms
-from .models import News, User, Message, Pig, Breed
+from .models import News, User, Message, Pig, Breed, Color, EyeColor
 from datetime import date
 from django.contrib.auth.forms import UserCreationForm
 import datetime
 from django.contrib.auth import get_user_model
 import re
+
+
+class PigColorWidget(forms.MultiWidget):
+    def __init__(self, attrs=None):
+        choices_position_1 = Color.objects.filter(position=1).values_list('name', flat=True).distinct()
+        choices_position_2 = Color.objects.filter(position=2).values_list('name', flat=True).distinct()
+        choices_position_3 = Color.objects.filter(position=3).values_list('name', flat=True).distinct()
+        choices_position_4 = Color.objects.filter(position=4).values_list('name', flat=True).distinct()
+
+        widgets = [
+            forms.Select(choices=[("", "")] + [(color, color) for color in choices_position_1]),
+            forms.Select(choices=[("", ""), ('Sable', 'Sable')]),
+            forms.Select(choices=[("", "")] + [(color, color) for color in choices_position_2]),
+            forms.Select(choices=[("", "")] + [(color, color) for color in choices_position_3]),
+            forms.Select(choices=[("", "")] + [(color, color) for color in choices_position_4]),
+        ]
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if value:
+            return value.split('/')
+        return [None, None]
+
+    def value_from_datadict(self, data, files, name):
+        values = [
+            data.get(name + '_0', None),
+            data.get(name + '_1', None),
+            data.get(name + '_2', None),
+            data.get(name + '_3', None),
+            data.get(name + '_4', None),
+        ]
+        for i in range(len(values)):
+            if values[i] is None:
+                values[i] = ""
+
+        result = values[0]
+        result += f' {values[1]}' if values[1] != '' else ''
+        if result == '':
+            result += values[2]
+        elif values[2] != '':
+            result += f'-{values[2]}'
+        if result != '' and values[3] != '':
+            result += f'-{values[3]}'
+        else:
+            result += values[3]
+        if result != '' and values[4] != '':
+            result += f'-{values[4]}'
+        else:
+            result += values[4]
+        return result
 
 
 class NewsForm(forms.ModelForm):
@@ -19,7 +69,7 @@ class ContactForm(forms.ModelForm):
         fields = ['title', 'first_name', 'email', 'content']
 
 
-class RegistrationAsForm(forms.Form):
+class RegistrationForm(forms.Form):
     registration_type = forms.ChoiceField(
         choices=[
             ('member', 'Hodowca lub Miłośnik'),
@@ -246,15 +296,14 @@ class ReplyForm(forms.Form):
     content = forms.CharField(widget=forms.Textarea, required=True)
 
 
-class PigForm(forms.ModelForm):
+class PigWDForm(forms.ModelForm):
     cur_year = datetime.datetime.today().year
     year_range = tuple([i for i in range(cur_year - 10, cur_year+1)])
 
     name = forms.CharField(max_length=150, label="Imię", required=True)
     sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=True)
     birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
-    colors = forms.CharField(max_length=200, label="Umaszczenie", required=True)
-    owner = forms.CharField(widget=forms.HiddenInput, required=False)
+    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
 
     class Meta:
         model = Pig
@@ -266,9 +315,125 @@ class PigForm(forms.ModelForm):
 
     def save(self, commit=True):
         pig = super().save(commit=False)
-        pig.breed = Breed.objects.get(name="Pupil - świnka bez rodowodu")
+        pig.breed = Breed.objects.get(name="PET (świnka domowa – pupil)")
         pig.is_active = True
         pig.owner = User.objects.get(id=self.owner)
         if commit:
             pig.save()
         return pig
+
+    def clean_colors(self):
+        cleaned_data = super().clean()
+        pig_color_value = cleaned_data.get('colors', None)
+        if pig_color_value.startswith('Sable'):
+            raise forms.ValidationError('Aby wybrać "Sable" wybierz kolor z rodziny czerni')
+        if pig_color_value == '':
+            raise forms.ValidationError('Wybierz przynajmniej jeden kolor.')
+
+        return pig_color_value
+
+
+class PigWZForm(forms.ModelForm):
+    cur_year = datetime.datetime.today().year
+    year_range = tuple([i for i in range(cur_year - 10, cur_year+1)])
+
+    name = forms.CharField(max_length=150, label="Imię", required=True)
+    nickname = forms.CharField(max_length=150, label="Przydomek", required=True)
+    sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=True)
+    birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=True)
+    breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=True)
+    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
+
+    class Meta:
+        model = Pig
+        fields = ['name', 'nickname', 'sex',
+                  'birth_date', 'owner', 'colors',
+                  'breed']
+
+    def __init__(self, *args, **kwargs):
+        self.owner = kwargs.pop('owner', None)
+        super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        pig = super().save(commit=False)
+        pig.is_active = True
+        pig.owner = User.objects.get(id=self.owner)
+        if commit:
+            pig.save()
+        return pig
+
+    def clean_colors(self):
+        cleaned_data = super().clean()
+        pig_color_value = cleaned_data.get('colors', None)
+        print(cleaned_data)
+        print(pig_color_value)
+        if pig_color_value.startswith('Sable'):
+            raise forms.ValidationError('Aby wybrać "Sable" wybierz kolor z rodziny czerni')
+        if pig_color_value == '':
+            raise forms.ValidationError('Wybierz przynajmniej jeden kolor.')
+
+        return pig_color_value
+
+
+class ExistingPigForm(forms.Form):
+    existing_pig = forms.ModelChoiceField(queryset=Pig.objects.all(), empty_label="--- Wybierz świnkę ---", required=False)
+
+
+class ExhibitorAddParentPigForm(forms.ModelForm):
+    name = forms.CharField(max_length=150, label="Imię", required=False)
+    nickname = forms.CharField(max_length=150, label="Przydomek", required=False)
+    breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=False)
+    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
+
+    class Meta:
+        model = Pig
+        fields = ['name', 'nickname', 'breed', 'colors']
+
+
+class ExhibitorAddPigForm(forms.ModelForm):
+    cur_year = datetime.datetime.today().year
+    year_range = tuple([i for i in range(cur_year - 10, cur_year + 1)])
+
+    name = forms.CharField(max_length=150, label="Imię", required=False)
+    nickname = forms.CharField(max_length=150, label="Przydomek", required=False)
+    sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=False)
+    birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
+    breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=False)
+    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
+    eye_color = forms.ModelChoiceField(queryset=EyeColor.objects.all(), label="Kolor oczu", required=False)
+
+    class Meta:
+        model = Pig
+        fields = ['name', 'nickname', 'sex', 'colors',
+                  'birth_date', 'birth_weight', 'breed',
+                  'eye_color']
+
+    def clean_colors(self):
+        pig_color_value = self.cleaned_data.get('colors')
+        if pig_color_value.startswith('Sable'):
+            raise forms.ValidationError('Aby wybrać "Sable" wybierz kolor z rodziny czerni')
+        if pig_color_value == '':
+            raise forms.ValidationError('Wybierz przynajmniej jeden kolor.')
+        # Dodać wyjątki kolorów dla ras !!
+        return pig_color_value
+
+    def clean_birth_weight(self):
+        birth_weight = self.cleaned_data.get('birth_weight')
+        if birth_weight < 30:
+            raise forms.ValidationError('Waga jest za mała.')
+        return birth_weight
+
+    def clean_name(self):
+        allowed_characters = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'-_")
+        name = self.cleaned_data.get('name')
+
+        if not all(char in allowed_characters for char in name):
+            raise forms.ValidationError('Imię zawiera niedozwolone znaki.')
+        return name
+
+    def clean_nickname(self):
+        allowed_characters = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'-_ ")
+        nickname = self.cleaned_data.get('nickname')
+        if not all(char in allowed_characters for char in nickname):
+            raise forms.ValidationError('Przydomek zawiera niedozwolone znaki.')
+        return nickname

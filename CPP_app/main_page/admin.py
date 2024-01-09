@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import News, User, Message, Breeding, Breed, Pig, Litter
+from .models import News, User, Message, Breeding, Breed, Pig, Litter, Color, EyeColor
 
 
 class NewsAdmin(admin.ModelAdmin):
@@ -33,3 +33,5 @@ admin.site.register(Breeding)
 admin.site.register(Breed)
 admin.site.register(Pig)
 admin.site.register(Litter)
+admin.site.register(EyeColor)
+admin.site.register(Color)

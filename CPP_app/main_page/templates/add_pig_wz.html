@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Dodaj świnkę z rodowodem</h2>
+  <p>Dodajesz świnkę jako wystawca zagraniczny</p><br>
+  <form method="post" class="row g-3">
+    {% csrf_token %}
+
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.name %}is-invalid{% endif %}" id="inputName" name="name" value="{{ form.data.name }}" required>
+      <label for="inputName" class="form-label">Imię</label>
+      {% if form.errors.name %}
+        <div class="alert alert-danger">
+          {% for error in form.errors.name %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.nickname %}is-invalid{% endif %}" id="inputNickname" name="nickname" value="{{ form.data.nickname }}" required>
+      <label for="inputNickname" class="form-label">Przydomek</label>
+      {% if form.errors.nickname %}
+        <div class="alert alert-danger">
+          {% for error in form.errors.nickname %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+
+
+    <div class="form-floating col-md-6">
+      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birth_date %}is-invalid{% endif %}" id="inputBirth_date" name="birth_date" value="{{ form.data.birth_date }}" min="{{ form.birth_date_min }}" max="{{ form.birth_date_max }}" required>
+      <label for="inputBirth_date" class="form-label">Data urodzenia</label>
+      {% if form.errors.birth_date %}
+        <div class="alert alert-danger">
+          {% for error in form.errors.birth_date %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="form-floating col-md-6">
+      <select class="form-select {% if form.errors.sex %}is-invalid{% endif %}" id="inputSex" name="sex" value="{{ form.data.sex }}" required>
+        <option value="" selected disabled>Wybierz płeć świnki</option>
+        {% for value, label in form.sex.field.choices %}
+          <option value="{{ value }}" {% if value == form.sex.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.sex %}
+        <div class="text-danger">
+          {% for error in form.errors.sex %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="form-floating col-md-6">
+      <select class="form-select {% if form.errors.breed %}is-invalid{% endif %}" id="inputBreed" name="breed" required>
+        <option value="" selected disabled>Wybierz rasę świnki</option>
+        {% for breed in form.breed.field.queryset %}
+          <option value="{{ breed.pk }}" {% if breed.pk == form.breed.value %}selected{% endif %}>{{ breed.name }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.breed %}
+        <div class="text-danger">
+          {% for error in form.errors.breed %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    {{ form.colors }}
+    {% for error in form.errors.colors %}
+            {{ error }}
+    {% endfor %}
+    <div class="col-12 mb-5 mt-5 text-center">
+      <button type="submit" class="btn btn-lg btn-primary">Dodaj świnkę</button>
+    </div>
+
+  </form>
+{% endblock %}

@@ -1,11 +1,17 @@
+import json
 from datetime import date, datetime, timedelta
-from django.http import HttpResponse
+
+from django.core.serializers.json import DjangoJSONEncoder
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.template import loader
-from .models import News, User, Message
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_POST
+from .models import News, User, Message, Pig, Breed
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import (NewsForm, CustomUserCreationForm, PigForm,
+from .forms import (NewsForm, CustomUserCreationForm, PigWDForm,
                     ConfirmDeleteUserForm, ContactForm, ReplyForm,
-                    RegistrationAsForm, ExhibitorCreationForm)
+                    RegistrationForm, ExhibitorCreationForm,
+                    PigWZForm, ExhibitorAddPigForm, ExhibitorAddParentPigForm, ExistingPigForm)
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -14,6 +20,8 @@ from django.views import View
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.html import escape
+import html
 
 
 @login_required
@@ -54,23 +62,25 @@ def main(request):
 
 
 @not_login_required
-def register_as(request):
+def register(request):
     if request.method == 'POST':
-        registration_type_form = RegistrationAsForm(request.POST)
+        registration_type_form = RegistrationForm(request.POST)
         if registration_type_form.is_valid():
             registration_type = registration_type_form.cleaned_data['registration_type']
             if registration_type == 'member':
-                return redirect('register')
+                return redirect('member_register')
             else:
                 return redirect('exhibitor_register')
     else:
-        registration_type_form = RegistrationAsForm()
+        registration_type_form = RegistrationForm()
 
-    return render(request, 'register_as.html', {'registration_type_form': registration_type_form})
+    return render(request, 'register.html', {'registration_type_form': registration_type_form})
 
 
 @not_login_required
-def register(request):
+def member_register(request):
+    min_date = datetime.now() - timedelta(days=80 * 365)
+    max_date = datetime.now()
     message_sent = False
     email = None
     if request.method == 'POST':
@@ -81,11 +91,18 @@ def register(request):
             message_sent = True
     else:
         form = CustomUserCreationForm()
-    return render(request, 'register.html', {'form': form, 'message_sent': message_sent, 'email': email})
+    return render(request, 'member_register.html', {'form': form,
+                                             'message_sent': message_sent,
+                                             'email': email,
+                                             'min_date': min_date.strftime('%Y-%m-%d'),
+                                             'max_date': max_date.strftime('%Y-%m-%d')
+                                             })
 
 
 @not_login_required
 def exhibitor_register(request):
+    min_date = datetime.now() - timedelta(days=80 * 365)
+    max_date = datetime.now()
     message_sent = False
     email = None
     if request.method == 'POST':
@@ -96,7 +113,12 @@ def exhibitor_register(request):
             message_sent = True
     else:
         form = ExhibitorCreationForm()
-    return render(request, 'exhibitor_register.html', {'form': form, 'message_sent': message_sent, 'email': email})
+    return render(request, 'exhibitor_register.html', {'form': form,
+                                                       'message_sent': message_sent,
+                                                       'email': email,
+                                                       'min_date': min_date.strftime('%Y-%m-%d'),
+                                                       'max_date': max_date.strftime('%Y-%m-%d')
+                                                       })
 
 
 @not_login_required
@@ -261,21 +283,35 @@ def reply_or_detail_message(request, message_id):
     return render(request, 'reply_or_detail_message.html', {'form': form, 'original_message': original_message})
 
 
-@login_required()
-def add_pig(request):
+@login_required
+def exhibitor_add_pig(request):
     min_date = datetime.now() - timedelta(days=10 * 365)
     max_date = datetime.now()
+    if request.user.role == 'WD':
+        template = 'add_pig_wd.html'
+    elif request.user.role == 'WZ':
+        template = 'add_pig_wz.html'
+    elif request.user.role == 'HP':
+        return redirect('breeder_add_pig')
+
     if request.method == 'POST':
-        form = PigForm(request.POST, request.FILES, owner=request.user.id)
+        if request.user.role == 'WD':
+            form = PigWDForm(request.POST, request.FILES, owner=request.user.id)
+        else:
+            form = PigWZForm(request.POST, request.FILES, owner=request.user.id)
+
         if form.is_valid():
             form.save()
-            return redirect('Main')
+            return redirect('exhibitor_my_pigs')
     else:
-        form = PigForm()
+        if request.user.role == 'WD':
+            form = PigWDForm()
+        else:
+            form = PigWZForm()
 
-    return render(request, 'add_pig.html', {'form': form,
-                                            'min_date': min_date.strftime('%Y-%m-%d'),
-                                            'max_date': max_date.strftime('%Y-%m-%d')})
+    return render(request, template, {'form': form,
+                                      'min_date': min_date.strftime('%Y-%m-%d'),
+                                      'max_date': max_date.strftime('%Y-%m-%d')})
 
 
 def add_news(request):
@@ -288,3 +324,132 @@ def add_news(request):
     else:
         form = NewsForm()
     return render(request, 'add_news.html', {'form': form})
+
+
+def exhibitor_my_pigs(request):
+    if request.method == 'POST':
+        delete_pig_id = request.POST.get('delete_pig_id')
+        if delete_pig_id:
+            try:
+                pig_to_delete = Pig.objects.get(id=delete_pig_id)
+                pig_to_delete.delete()
+            except Pig.DoesNotExist:
+                pass
+    user_pigs = Pig.objects.filter(owner=request.user)
+    return render(request, 'exhibitor_my_pigs.html', {'user_pigs': user_pigs})
+
+
+def exhibitor_pig_detail(request, pig_id):
+    pig = get_object_or_404(Pig, id=pig_id)
+
+    if request.method == 'POST':
+        delete_pig_id = request.POST.get('delete_pig_id', None)
+        if delete_pig_id is not None:
+            pig.delete()
+            return redirect('exhibitor_my_pigs')
+    return render(request, 'exhibitor_pig_detail.html', {'pig': pig})
+
+
+@csrf_protect
+@require_POST
+def get_parent_pig_info(request):
+    if request.method == 'POST':
+        selected_pig_name = request.POST.get('pig_name')
+        selected_pig_nickname = request.POST.get('pig_nickname')
+        selected_pig = get_object_or_404(Pig, name=selected_pig_name, nickname=selected_pig_nickname)
+        pig_info = {
+            'name': selected_pig.name,
+            'nickname': selected_pig.nickname,
+            'breed': selected_pig.breed.name,
+            'colors': selected_pig.colors,
+        }
+        if selected_pig.mother and selected_pig.father:
+            pig_info['mother_name'] = selected_pig.mother.name
+            pig_info['mother_nickname'] = selected_pig.mother.nickname
+            pig_info['father_name'] = selected_pig.father.name
+            pig_info['father_nickname'] = selected_pig.father.nickname
+        return JsonResponse(pig_info)
+    else:
+        return JsonResponse({'error': 'Invalid request method'})
+
+
+@csrf_protect
+@require_POST
+def get_pig_info(request):
+    if request.method == 'POST':
+        selected_pig_name = request.POST.get('pig_name').strip() if request.POST.get('pig_name') else None
+        selected_pig_nickname = request.POST.get('pig_nickname').strip() if request.POST.get('pig_nickname') else None
+        selected_pig = Pig.objects.filter(name=selected_pig_name, nickname=selected_pig_nickname).first()
+        if selected_pig is not None:
+            pig_info = {
+                'name': selected_pig.name,
+                'nickname': selected_pig.nickname,
+                'breed': selected_pig.breed.name,
+                'colors': selected_pig.colors,
+                'sex': selected_pig.sex,
+                'birth_date': selected_pig.birth_date if selected_pig.birth_date is not None else None,
+                'birth_weight': selected_pig.birth_weight if selected_pig.birth_weight is not None else None,
+                'eye_color': selected_pig.eye_color.name if selected_pig.eye_color and selected_pig.eye_color.name is not None else None
+            }
+            if selected_pig.mother and selected_pig.father:
+                pig_info['mother_name'] = selected_pig.mother.name
+                pig_info['mother_nickname'] = selected_pig.mother.nickname
+                pig_info['father_name'] = selected_pig.father.name
+                pig_info['father_nickname'] = selected_pig.father.nickname
+            return JsonResponse(pig_info)
+        else:
+            return JsonResponse({'message': "Pig with the given name and nickname doesn't exist"})
+    else:
+        return JsonResponse({'error': 'Invalid request method'})
+
+
+class BreedEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Breed):
+            return obj.name
+        return super().default(obj)
+
+
+def breeder_add_pig(request):
+    parent_forms = [ExhibitorAddParentPigForm(prefix=f'parent_{i}') for i in range(14)]
+    pig_form = ExhibitorAddPigForm(prefix='pig')
+    existing_pig_form = ExistingPigForm()
+    all_male_pigs = [f"{pig.name}   {pig.nickname}" for pig in
+                     Pig.objects.filter(sex='Male').exclude(nickname__exact='')]
+    all_female_pigs = [f"{pig.name}   {pig.nickname}" for pig in
+                       Pig.objects.filter(sex='Female').exclude(nickname__exact='')]
+    if request.method == 'POST':
+        pig_form = ExhibitorAddPigForm(request.POST, prefix='pig')
+        parent_forms = [ExhibitorAddParentPigForm(request.POST, prefix=f'parent_{i}') for i in range(14)]
+        existing_pig_form = ExistingPigForm(request.POST)
+
+        if pig_form.is_valid() and all(form.is_valid() for form in parent_forms):
+            data = {
+                'exhibitor_pig': pig_form.cleaned_data,
+                'exhibitor_parents': [{'id': i+1, **form.cleaned_data} for i, form in enumerate(parent_forms)]
+            }
+            # with open('exhibitor_data.json', 'w') as json_file:
+            #     json.dump(data, json_file, cls=BreedEncoder)
+            user_name = request.user.username if request.user.is_authenticated else "niezalogowany"
+            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            existing_data = []
+
+            with open('exhibitor_data.json', 'a') as json_file:
+                existing_data.append(data)
+
+                json_data = json.dumps({
+                    'user_name': user_name,
+                    'timestamp': current_date,
+                    'data': data
+                }, cls=BreedEncoder)
+
+                json_file.write(json_data + '\n')
+        else:
+            print("Formularz nie jest poprawny. Sprawdź błędy:")
+            for field, errors in pig_form.errors.items():
+                print(f"{field}: {', '.join(errors)}")
+    return render(request, 'breeder_add_pig.html', {'parent_forms': parent_forms,
+                                                    'pig_form': pig_form,
+                                                    'existing_pig_form': existing_pig_form,
+                                                    'all_male_pigs': all_male_pigs,
+                                                    'all_female_pigs': all_female_pigs})

@@ -58,7 +58,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-4">
-      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}">
+      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}" min="{{ min_date }}" max="{{ max_date }}">
       <label for="inputBirthdate" class="form-label">Data urodzenia</label>
       {% if form.errors.birthdate %}
       <div class="alert alert-danger">
