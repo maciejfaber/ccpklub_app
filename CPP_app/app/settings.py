@@ -130,7 +130,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'maciejowskifaber@gmail.com'
-EMAIL_HOST_PASSWORD = 'olnfjqfgpiivyqbw'
+EMAIL_HOST_PASSWORD = '########'
 
-RECAPTCHA_PUBLIC_KEY = '6LdwlPAoAAAAAGIVwqht4E1Wrp_uRHKYMErQ6eSV'
-RECAPTCHA_PRIVATE_KEY = '6LdwlPAoAAAAAOullPsOC-1LG8KTrHvSsgJGdbeR'
+RECAPTCHA_PUBLIC_KEY = '########################################'
+RECAPTCHA_PRIVATE_KEY = '########################################'
