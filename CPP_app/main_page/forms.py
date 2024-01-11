@@ -1,5 +1,5 @@
 from django import forms
-from .models import News, User, Message, Pig, Breed, Color, EyeColor
+from .models import News, User, Message, Pig, Breed, Color, EyeColor, Breeding
 from datetime import date
 from django.contrib.auth.forms import UserCreationForm
 import datetime
@@ -40,20 +40,21 @@ class PigColorWidget(forms.MultiWidget):
             if values[i] is None:
                 values[i] = ""
 
-        result = values[0]
-        result += f' {values[1]}' if values[1] != '' else ''
-        if result == '':
-            result += values[2]
-        elif values[2] != '':
-            result += f'-{values[2]}'
-        if result != '' and values[3] != '':
-            result += f'-{values[3]}'
-        else:
-            result += values[3]
-        if result != '' and values[4] != '':
-            result += f'-{values[4]}'
-        else:
-            result += values[4]
+        # result = values[0]
+        # result += f' {values[1]}' if values[1] != '' else ''
+        # if result == '':
+        #     result += values[2]
+        # elif values[2] != '':
+        #     result += f'-{values[2]}'
+        # if result != '' and values[3] != '':
+        #     result += f'-{values[3]}'
+        # else:
+        #     result += values[3]
+        # if result != '' and values[4] != '':
+        #     result += f'-{values[4]}'
+        # else:
+        #     result += values[4]
+        result = f"['{values[0]}', '{values[1]}', '{values[2]}', '{values[3]}', '{values[4]}']"
         return result
 
 
@@ -401,12 +402,14 @@ class ExhibitorAddPigForm(forms.ModelForm):
     breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=False)
     colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
     eye_color = forms.ModelChoiceField(queryset=EyeColor.objects.all(), label="Kolor oczu", required=False)
+    owner = forms.CharField(max_length=255, label="Właściciel", required=False)
+    breeder = forms.CharField(max_length=255, label="Hodowca", required=False)
 
     class Meta:
         model = Pig
         fields = ['name', 'nickname', 'sex', 'colors',
                   'birth_date', 'birth_weight', 'breed',
-                  'eye_color']
+                  'eye_color', 'owner', 'breeder']
 
     def clean_colors(self):
         pig_color_value = self.cleaned_data.get('colors')
@@ -419,8 +422,9 @@ class ExhibitorAddPigForm(forms.ModelForm):
 
     def clean_birth_weight(self):
         birth_weight = self.cleaned_data.get('birth_weight')
-        if birth_weight < 30:
-            raise forms.ValidationError('Waga jest za mała.')
+        if birth_weight is not None:
+            if birth_weight < 30:
+                raise forms.ValidationError('Waga jest za mała.')
         return birth_weight
 
     def clean_name(self):
@@ -437,3 +441,19 @@ class ExhibitorAddPigForm(forms.ModelForm):
         if not all(char in allowed_characters for char in nickname):
             raise forms.ValidationError('Przydomek zawiera niedozwolone znaki.')
         return nickname
+
+    def clean_breed(self):
+        return self.cleaned_data.get('breed')
+
+    def clean_owner(self):
+        breeding_name = self.cleaned_data.get('owner')
+
+        if breeding_name:
+            try:
+                breeding = Breeding.objects.get(name=breeding_name)
+            except Breeding.DoesNotExist:
+                raise forms.ValidationError("Nie znaleziono hodowli o podanej nazwie.")
+            return breeding
+        else:
+            return None
+

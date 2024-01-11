@@ -1,12 +1,14 @@
 import json
+import os
 from datetime import date, datetime, timedelta
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.template import loader
-from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
-from .models import News, User, Message, Pig, Breed
+from .models import News, User, Message, Pig, Breed, EyeColor, Breeding
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import (NewsForm, CustomUserCreationForm, PigWDForm,
                     ConfirmDeleteUserForm, ContactForm, ReplyForm,
@@ -92,11 +94,11 @@ def member_register(request):
     else:
         form = CustomUserCreationForm()
     return render(request, 'member_register.html', {'form': form,
-                                             'message_sent': message_sent,
-                                             'email': email,
-                                             'min_date': min_date.strftime('%Y-%m-%d'),
-                                             'max_date': max_date.strftime('%Y-%m-%d')
-                                             })
+                                                    'message_sent': message_sent,
+                                                    'email': email,
+                                                    'min_date': min_date.strftime('%Y-%m-%d'),
+                                                    'max_date': max_date.strftime('%Y-%m-%d')
+                                                    })
 
 
 @not_login_required
@@ -387,6 +389,7 @@ def get_pig_info(request):
                 'breed': selected_pig.breed.name,
                 'colors': selected_pig.colors,
                 'sex': selected_pig.sex,
+                'breeder': selected_pig.breeder,
                 'birth_date': selected_pig.birth_date if selected_pig.birth_date is not None else None,
                 'birth_weight': selected_pig.birth_weight if selected_pig.birth_weight is not None else None,
                 'eye_color': selected_pig.eye_color.name if selected_pig.eye_color and selected_pig.eye_color.name is not None else None
@@ -403,11 +406,18 @@ def get_pig_info(request):
         return JsonResponse({'error': 'Invalid request method'})
 
 
-class BreedEncoder(DjangoJSONEncoder):
+class CustomJSONEncoder(DjangoJSONEncoder):
     def default(self, obj):
         if isinstance(obj, Breed):
             return obj.name
+        elif isinstance(obj, EyeColor):
+            return obj.name
+        elif isinstance(obj, Breeding):
+            return obj.name
         return super().default(obj)
+
+    def decode(self, json_string):
+        return json.loads(json_string)
 
 
 def breeder_add_pig(request):
@@ -424,24 +434,37 @@ def breeder_add_pig(request):
         existing_pig_form = ExistingPigForm(request.POST)
 
         if pig_form.is_valid() and all(form.is_valid() for form in parent_forms):
+            user_breeding = Breeding.objects.filter(owners=request.user).first()
+            pig_form.cleaned_data['owner'] = user_breeding
             data = {
                 'exhibitor_pig': pig_form.cleaned_data,
-                'exhibitor_parents': [{'id': i+1, **form.cleaned_data} for i, form in enumerate(parent_forms)]
+                'exhibitor_parents': [{'id': i + 1, **form.cleaned_data} for i, form in enumerate(parent_forms)]
             }
-            # with open('exhibitor_data.json', 'w') as json_file:
-            #     json.dump(data, json_file, cls=BreedEncoder)
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # TODO
+            json_file_path = os.path.join(base_dir, 'waiting_pig_list.json')
+            line_count = 0
+            with open(json_file_path, 'r') as json_file:
+                lines = json_file.readlines()
+                if lines:
+                    last_line = json.loads(lines[-1])
+                    last_id = last_line.get('id')
+                    if last_id is not None:
+                        line_count = last_id
+                    else:
+                        print("Brak klucza 'id' w ostatniej linii.")
+
             user_name = request.user.username if request.user.is_authenticated else "niezalogowany"
             current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             existing_data = []
-
-            with open('exhibitor_data.json', 'a') as json_file:
+            with open('waiting_pig_list.json', 'a') as json_file:
                 existing_data.append(data)
-
+                line_count += 1
                 json_data = json.dumps({
+                    'id': line_count,
                     'user_name': user_name,
                     'timestamp': current_date,
                     'data': data
-                }, cls=BreedEncoder)
+                }, cls=CustomJSONEncoder)
 
                 json_file.write(json_data + '\n')
         else:
@@ -453,3 +476,250 @@ def breeder_add_pig(request):
                                                     'existing_pig_form': existing_pig_form,
                                                     'all_male_pigs': all_male_pigs,
                                                     'all_female_pigs': all_female_pigs})
+
+
+def display_waiting_pigs(request):
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # TODO
+    json_file_path = os.path.join(base_dir, 'waiting_pig_list.json')
+    data = []
+    with open(json_file_path, 'r') as json_file:
+        for line in json_file:
+            try:
+                row_data = json.loads(line)
+                pig_id = row_data.get('id')
+                adding = row_data.get('user_name')
+                timestamp = row_data.get('timestamp')
+                timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+                pig_name = row_data.get('data', {}).get('exhibitor_pig', {}).get('name')
+                pig_nickname = row_data.get('data', {}).get('exhibitor_pig', {}).get('nickname')
+
+                data.append((pig_id, pig_name, pig_nickname, adding, timestamp))
+            except json.JSONDecodeError as e:
+                return render(request, 'json_error.html', {'error_message': str(e)})
+
+    data.sort(key=lambda x: x[4], reverse=False)
+
+    return render(request, 'waiting_pig_list.html', {'waiting_pigs': data})
+
+
+# def display_waiting_pig_details(request, pig_id):
+#     parent_forms = [ExhibitorAddParentPigForm(prefix=f'parent_{i}') for i in range(14)]
+#     pig_form = ExhibitorAddPigForm(prefix='pig')
+#
+#     with open('waiting_pig_list.json', 'r') as json_file:
+#         for line in json_file:
+#             try:
+#                 row_data = json.loads(line)
+#                 current_pig_id = row_data.get('id')
+#
+#                 if current_pig_id == pig_id:
+#                     return render(request, 'waiting_pig_list_details.html', {'parent_forms': parent_forms,
+#                                                                              'pig_form': pig_form,
+#                                                                              'pig_data': row_data})
+#             except json.JSONDecodeError as e:
+#                 return render(request, 'json_error.html', {'error_message': str(e)})
+#
+#     return HttpResponse("Nie znaleziono świńki o podanym ID.")
+
+
+def add_parent_pig(pig_data, sex, mother, father):
+    print(pig_data)
+    pig_info = Pig.objects.filter(name=pig_data['name'], nickname=pig_data['nickname'], breed=pig_data['breed']).first()
+    if mother:
+        mother_data = Pig.objects.filter(name=mother['name'], nickname=mother['nickname'], breed=mother['breed']).first()
+    else:
+        mother_data = None
+    if father:
+        father_data = Pig.objects.filter(name=father['name'], nickname=father['nickname'], breed=father['breed']).first()
+    else:
+        father_data = None
+    if pig_info:
+        if pig_info.mother and pig_info.father:
+            print("Świnka ma dodanych rodziców")
+        if father_data and mother_data:
+            pig_info.mother = mother_data
+            pig_info.father = father_data
+            pig_info.save()
+    else:
+        if mother and father:
+            pig = Pig(
+                name=pig_data['name'],
+                nickname=pig_data['nickname'],
+                sex=sex,
+                breed=pig_data['breed'],
+                colors=pig_data['colors'],
+                mother=mother_data,
+                father=father_data,
+            )
+            pig.save()
+        else:
+            pig = Pig(
+                name=pig_data['name'],
+                nickname=pig_data['nickname'],
+                sex=sex,
+                breed=pig_data['breed'],
+                colors=pig_data['colors'],
+            )
+            pig.save()
+
+
+def add_pig(pig_data, mother, father):
+    pig_info = Pig.objects.filter(name=pig_data['name'], nickname=pig_data['nickname'], breed=pig_data['breed']).first()
+    if mother:
+        mother_data = Pig.objects.filter(name=mother['name'], nickname=mother['nickname'], breed=mother['breed']).first()
+    else:
+        mother_data = None
+    if father:
+        father_data = Pig.objects.filter(name=father['name'], nickname=father['nickname'], breed=father['breed']).first()
+    else:
+        father_data = None
+    if pig_info:
+        if not pig_info.mother and not pig_info.father:
+            pig_info.mother = mother_data
+            pig_info.father = father_data
+        if not pig_info.birth_date:
+            pig_info.birth_date = pig_data['birth_date']
+        if not pig_info.birth_weight:
+            pig_info.birth_weight = pig_data['birth_weight']
+        if not pig_info.eye_color:
+            pig_info.eye_color = pig_data['eye_color']
+        if not pig_info.owner:
+            pig_info.owner = pig_data['owner']
+        if not pig_info.breeder:
+            pig_info.breeder = pig_data['breeder']
+        pig_info.save()
+    else:
+        if mother and father:
+            pig = Pig(
+                name=pig_data['name'],
+                nickname=pig_data['nickname'],
+                sex=pig_data['sex'],
+                breed=pig_data['breed'],
+                colors=pig_data['colors'],
+                mother=mother_data,
+                father=father_data,
+                birth_date=pig_data['birth_date'],
+                birth_weight=pig_data['birth_weight'],
+                eye_color=pig_data['eye_color'],
+                breeder=pig_data['breeder'],
+                owner=pig_data['owner'],
+            )
+            pig.save()
+        else:
+            pig = Pig(
+                name=pig_data['name'],
+                nickname=pig_data['nickname'],
+                sex=pig_data['sex'],
+                breed=pig_data['breed'],
+                colors=pig_data['colors'],
+                birth_date=pig_data['birth_date'],
+                birth_weight=pig_data['birth_weight'],
+                eye_color=pig_data['eye_color'],
+                breeder=pig_data['breeder'],
+                owner=pig_data['owner'],
+            )
+            pig.save()
+
+
+def display_waiting_pig_details(request, pig_id):
+    parent_forms = [ExhibitorAddParentPigForm(prefix=f'parent_{i}') for i in range(14)]
+    pig_form = ExhibitorAddPigForm(prefix='pig')
+    if request.method == 'POST':
+        pig_form = ExhibitorAddPigForm(request.POST, prefix='pig')
+        parent_forms = [ExhibitorAddParentPigForm(request.POST, prefix=f'parent_{i}') for i in range(14)]
+        if pig_form.is_valid() and all(form.is_valid() for form in parent_forms):
+            pig_data = pig_form.cleaned_data
+            parent_data = [form.cleaned_data for form in parent_forms]
+            parents_complete = [
+                parent_data[i]['name'] != '' and
+                parent_data[i]['nickname'] != '' and
+                parent_data[i]['breed'] is not None and
+                parent_data[i]['colors'] != "['','','','','']"
+                for i in range(14)
+            ]
+            for i in range(14):
+                if not parents_complete[i]:
+                    parent_data[i] = None
+
+            pig_info = Pig.objects.filter(name=pig_data['name'],
+                                          nickname=pig_data['nickname'],
+                                          breed=pig_data['breed']).first()
+
+            if pig_info and pig_info.owner != '' and pig_info.owner is not None and pig_info.owner != pig_data.get('owner'):
+                    print("Edytujący świnkę nie jest jej właścicielem")
+                    print("Nie można edytować nie swojej świnki")
+                    print("Należy wysłać użytkownikowi maila z informacją o właścicielu")  #TODO
+            else:
+                if parents_complete[0] and parents_complete[1]:
+                    if parents_complete[2] and parents_complete[3]:
+                        if parents_complete[6] and parents_complete[7]:
+                            add_parent_pig(parent_data[6], 'Female')
+                            add_parent_pig(parent_data[7], 'Male')
+                        if parents_complete[8] and parents_complete[9]:
+                            add_parent_pig(parent_data[8], 'Female')
+                            add_parent_pig(parent_data[9], 'Male')
+                        add_parent_pig(parent_data[2], 'Female', parent_data[6], parent_data[7])
+                        add_parent_pig(parent_data[3], 'Male', parent_data[8], parent_data[9])
+                    if parents_complete[4] and parents_complete[5]:
+                        if parents_complete[10] and parents_complete[11]:
+                            add_parent_pig(parent_data[10], 'Female')
+                            add_parent_pig(parent_data[11], 'Male')
+                        if parents_complete[12] and parents_complete[13]:
+                            add_parent_pig(parent_data[12], 'Female')
+                            add_parent_pig(parent_data[13], 'Male')
+                        add_parent_pig(parent_data[4], 'Female', parent_data[10], parent_data[11])
+                        add_parent_pig(parent_data[5], 'Male', parent_data[12], parent_data[13])
+                    add_parent_pig(parent_data[0], 'Female', parent_data[2], parent_data[3])
+                    add_parent_pig(parent_data[1], 'Male', parent_data[4], parent_data[5])
+                add_pig(pig_data, parent_data[0], parent_data[1])
+            print("Można usunąć wiersz z pliku json") #TODO
+            return redirect('waiting_pig_list')
+        else:
+            print("Pig form is not valid")
+    with open('waiting_pig_list.json', 'r') as json_file:
+        for line in json_file:
+            try:
+                row_data = json.loads(line)
+
+                current_pig_id = row_data.get('id')
+
+                if current_pig_id == pig_id:
+                    return render(request, 'waiting_pig_list_details.html', {'parent_forms': parent_forms,
+                                                                             'pig_form': pig_form,
+                                                                             'pig_data': row_data})
+            except json.JSONDecodeError as e:
+                return render(request, 'json_error.html', {'error_message': str(e)})
+
+    return render(request, 'waiting_pig_list_details.html', {'parent_forms': parent_forms, 'pig_form': pig_form})
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class delete_waiting_pig(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            pig_id_to_remove = request.POST.get('pig_id')
+
+            if not pig_id_to_remove.isdigit():
+                raise ValueError('Nieprawidłowe pig_id.')
+
+            pig_id_to_remove = int(pig_id_to_remove)
+
+            with open('waiting_pig_list.json', 'r') as json_file, open('temp_waiting_pig_list.json',
+                                                                       'w') as temp_file:
+                for line in json_file:
+                    try:
+                        row_data = json.loads(line)
+                        current_pig_id = row_data.get('id')
+
+                        if current_pig_id != pig_id_to_remove:
+                            temp_file.write(json.dumps(row_data) + '\n')
+                    except json.JSONDecodeError as e:
+                        return JsonResponse({'status': 'error', 'error_message': str(e)})
+
+            with open('waiting_pig_list.json', 'w') as json_file:
+                json_file.writelines(open('temp_waiting_pig_list.json').readlines())
+
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'error_message': str(e)})
+

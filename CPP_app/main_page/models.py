@@ -178,9 +178,10 @@ class Pig(models.Model):
     sex = models.CharField(max_length=6, choices=SEX_CHOICE, default='Samiec', blank=False, null=False)
     birth_date = models.DateField(blank=True, null=True)
     birth_weight = models.PositiveIntegerField(null=True, blank=True)
-    owner = models.ForeignKey('User', null=True, blank=True, on_delete=models.SET_NULL,
-                              default=None, related_name="PIG_user")
+    owner = models.ForeignKey('Breeding', null=True, blank=True, on_delete=models.SET_NULL,
+                              default=None, related_name="PIG_owner")
     breed = models.ForeignKey('Breed', on_delete=models.PROTECT)
+    breeder = models.CharField(max_length=255, null=True, blank=True)
     father = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
                                default=None, related_name='PIG_father', limit_choices_to={'sex': 'Male'})
     mother = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,

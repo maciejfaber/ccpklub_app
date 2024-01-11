@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Oczekująca rejestracja świnek - in construction</h1>
+    <table>
+        <thead>
+            <tr>
+                <th class="m-3">ID</th>
+                <th class="m-3">Imię</th>
+                <th class="m-3">Przydomek</th>
+                <th class="m-3">Dodający</th>
+                <th class="m-3">Data</th>
+                <th class="m-3"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pig_id, pig_name, pig_nickname, username, timestamp in waiting_pigs %}
+                <tr class="m-3">
+                    <td class="p-3 border">{{ pig_id }}</td>
+                    <td class="p-3 border">{{ pig_name }}</td>
+                    <td class="p-3 border">{{ pig_nickname }}</td>
+                    <td class="p-3 border">{{ username }}</td>
+                    <td class="p-3 border">{{ timestamp }}</td>
+                    <td class="p-3 border">
+                        <button class="check-btn" onclick="window.location.href='{% url 'waiting_pig_list_details' pig_id %}'">Sprawdź</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

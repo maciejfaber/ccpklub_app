@@ -1,229 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-<script src="https://code.jquery.com/jquery-3.6.0.js"></script>
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
-<script>
-$(document).ready(function () {
-    var availableMalePigs = [
-        {% for pig in all_male_pigs %}
-            "{{ pig|safe }}",
-        {% endfor %}
-    ];
-
-    $('[id^="existing_male_pig_input_"]').click(function () {
-        var index = $(this).attr('id').slice(-2);
-        if (index[0] === '_') {
-            index = index.slice(1);
-        }
-        $('#existing_male_pig_input_' + index).autocomplete({
-               source: availableMalePigs
-            });
-    });
-
-    var availableFemalePigs = [
-        {% for pig in all_female_pigs %}
-            "{{ pig|safe }}",
-        {% endfor %}
-    ];
-
-    $('[id^="existing_female_pig_input_"]').click(function() {
-		var index = $(this).attr('id').slice(-2);
-		if (index[0] === '_') {
-			index = index.slice(1);
-		}
-		$('#existing_female_pig_input_' + index).autocomplete({
-			source: availableFemalePigs
-		});
-	});
-
-    function getCSRFToken() {
-		return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken=')).split('=')[1];
-	}
-
-    // Obsługa kliknięcia przycisku "Dodaj nową"
-	$('[id^="new_Pig_Btn_"]').click(function() {
-		var index = $(this).attr('id').slice(-2);
-		if (index[0] === '_') {
-			index = index.slice(1);
-		}
-		var form = $('#Add_Parent_Pig_Form_' + index);
-		var ui = $('#ui-widget_' + index);
-
-		// Zresetuj wartości pól formularza
-		form.find('input').val('');
-		ui.find('input').val('');
-		form.find('select').find('option').removeAttr('selected');
-		form.find('select').find('option:first').attr('selected', 'selected');
-
-		// Zablokuj wszystkie pola w formularzu i dodaj atrybut disabled
-		form.find('input, select').prop('disabled', false);
-	});
-
-    // Obsługa kliknięcia przycisku "Załaduj"
-	$('[id^="load_Pig_Btn_"]').click(function() {
-		var index = $(this).attr('id').slice(-2);
-		if (index[0] === '_') {
-			index = index.slice(1);
-		}
-		var selectedPig = ($('#existing_male_pig_input_' + index).length > 0) ?
-			$('#existing_male_pig_input_' + index).val() :
-			$('#existing_female_pig_input_' + index).val();
-		var pigValues = selectedPig.split("   ");
-		var pigName = pigValues[0];
-		var pigNickname = pigValues[1];
-		console.log(pigName);
-		console.log(pigNickname);
-        // Użycie AJAX do pobrania informacji o śwince
-		$.ajax({
-			url: '{% url "get_parent_pig_info" %}',
-			type: 'POST',
-			data: {
-				pig_name: pigName,
-				pig_nickname: pigNickname,
-				'csrfmiddlewaretoken': getCSRFToken(),
-			},
-			dataType: 'json',
-			success: function(data) {
-				if ('error' in data) {
-					alert(data.error);
-				} else {
-					displayPigInfo(index, data);
-				}
-			},
-			error: function() {
-				alert('Błąd pobierania informacji o śwince.');
-			}
-		});
-	});
-
-    function displayPigInfo(index, data) {
-		var colors = JSON.parse(data.colors.replace(/'/g, "\""));
-		// Przypisz dane do pól formularza
-		var form = $('#Add_Parent_Pig_Form_' + index);
-		form.find('input[name="parent_' + index + '-name"]').val(data.name);
-		form.find('input[name="parent_' + index + '-nickname"]').val(data.nickname);
-
-        var breedSelectElement = form.find('select[name="parent_' + index + '-breed"]');
-		breedSelectElement.find('option').removeAttr('selected');
-		breedSelectElement.find('option[value="' + data.breed + '"]').attr('selected', true);
-		breedSelectElement.find('option').filter(function() {
-			return $(this).text() === data.breed;
-		}).attr('selected', true);
-
-        colors.forEach(function(color, i) {
-			var selectElement = form.find('select[name="parent_' + index + '-colors_' + i + '"]');
-			selectElement.find('option').removeAttr('selected');
-			selectElement.find('option[value="' + color + '"]').attr('selected', true);
-		});
-
-        // Dodaj atrybut disabled do wszystkich pól
-		form.find('input, select').prop('disabled', true);
-
-        // Uzupełnij istniejących przodków
-		console.log(index);
-		console.log(data.mother_name);
-		console.log(data.mother_nickname);
-		if (data.mother_name && data.mother_nickname && data.father_nickname && data.father_name && index !== 6 && index !== 7 && index !== 8 && index !== 9 && index !== 10 && index !== 11 && index !== 12 && index !== 13) {
-			if (index > -1 && index < 6) {
-				var motherIndex = index * 2 + 2;
-				var fatherIndex = index * 2 + 3;
-				$('#existing_female_pig_input_' + motherIndex).val(data.mother_name + '   ' + data.mother_nickname);
-				$('#existing_male_pig_input_' + fatherIndex).val(data.father_name + '   ' + data.father_nickname);
-				$('#load_Pig_Btn_' + motherIndex).click();
-				$('#load_Pig_Btn_' + fatherIndex).click();
-			}
-		}
-	}
-
-	$('.tree').hide();
-    $('#clear_btn').hide();
-
-    $('#clear_pig').click(function() {
-        // Iteruj przez wszystkie elementy formularza
-        $('form input, form select, form textarea').each(function() {
-            $(this).removeAttr('disabled');
-            $(this).val('');
-        });
-    });
-
-    // Obsługa kliknięcia przycisku "Dalej"
-	$('[id^="check_pig"]').click(function() {
-        $('.tree').show();
-
-		var pigName = $('#id_pig-name').val();
-		var pigNickname = $('#id_pig-nickname').val();
-		console.log(pigName);
-		console.log(pigNickname);
-        // Użycie AJAX do pobrania informacji o śwince
-		$.ajax({
-			url: '{% url "get_pig_info" %}',
-			type: 'POST',
-			data: {
-				pig_name: pigName,
-				pig_nickname: pigNickname,
-				'csrfmiddlewaretoken': getCSRFToken(),
-			},
-			dataType: 'json',
-			success: function(data) {
-				if ('message' in data) {
-					$('#next_btn').hide();
-					$('#clear_btn').show();
-				} else {
-				    console.log(data);
-					$('#next_btn').hide();
-					$('#clear_btn').show();
-					if (data.birth_date !== null) {
-					    $('#id_pig-birth_date').val(data.birth_date);
-					}
-					if (data.birth_weight !== null) {
-					    $('#id_pig-birth_weight').val(data.birth_weight);
-					}
-					if (data.birth_weight !== null) {
-					    $('#id_pig-breeder').val(data.breeder);
-					}
-					if (data.eye_color !== null) {
-					    $('#id_pig-eye_color option').removeAttr('selected');
-					    $('#id_pig-eye_color option[value="' + data.eye_color + '"]').attr('selected', true);
-					}
-                    $('#id_pig-sex option').removeAttr('selected');
-					$('#id_pig-sex option[value="' + data.sex + '"]').attr('selected', true);
-					$('#id_pig-breed option').removeAttr('selected');
-					$('#id_pig-breed option[value="' + data.breed + '"]').attr('selected', true);
-					var colors = JSON.parse(data.colors.replace(/'/g, "\""));
-					var form = $('#id_pig-colors');
-
-					colors.forEach(function(color, i) {
-                        var selectElement = form.find('select[name="pig-colors_' + i + '"]');
-                        selectElement.find('option').removeAttr('selected');
-                        selectElement.find('option[value="' + color + '"]').attr('selected', true);
-                    });
-                    if (data.mother_name !== undefined && data.mother_nickname !== undefined
-                    && data.father_name !== undefined && data.father_nickname !== undefined) {
-                        var pig = [data.mother_name, data.mother_nickname].join('   ');
-                        $('#existing_female_pig_input_0').val(pig);
-                        $('#load_Pig_Btn_0').trigger('click');
-                        var pig = [data.father_name, data.father_nickname].join('   ');
-                        $('#existing_male_pig_input_1').val(pig);
-                        $('#load_Pig_Btn_1').trigger('click');
-                    }
-
-				}
-			},
-			error: function() {
-				alert('Błąd pobierania informacji o śwince.');
-			}
-		});
-    });
-
-    $("#send_btn").click(function () {
-            var formFields = $("form :input");
-
-            formFields.prop("disabled", false);
-        });
-});
-</script>
 <style>
     .parents {
       height: 50%;
@@ -235,36 +12,87 @@ $(document).ready(function () {
       height: 12.5%;
     }
 </style>
-<form method="post" action="{% url 'breeder_add_pig' %}">
-{% csrf_token %}    <div class="row border text-center pb-3" id="main_pig">
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+    $(document).ready(function() {
+        function getCSRFToken() {
+            return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken=')).split('=')[1];
+        }
+        $("#main_pig :input").prop("disabled", true);
+        $("#last_info :input").prop("disabled", true);
+
+        $('#edit_btn').click(function() {
+            $("#main_pig :input").prop("disabled", false);
+            $("#last_info :input").prop("disabled", false);
+        });
+
+        $("#delete_btn").click(function() {
+            var pigIdToRemove = {{ pig_data.id }};
+            var csrftoken = getCSRFToken();
+
+            $.ajax({
+                type: 'POST',
+                url: '/delete_waiting_pig/',
+                data: {
+                    'pig_id': pigIdToRemove,
+                    'csrfmiddlewaretoken': csrftoken,
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Świńka została usunięta pomyślnie.');
+                        window.location.href = '/waiting_pig_list/';
+                    } else {
+                        alert('Wystąpił błąd: ' + response.error_message);
+                    }
+                },
+                error: function() {
+                    alert('Wystąpił błąd podczas wysyłania żądania.');
+                }
+            });
+        });
+            $("#accept_btn").click(function () {
+            var formFields = $("form :input");
+
+            formFields.prop("disabled", false);
+        });
+    });
+
+
+
+
+</script>
+<form method="post" action="{% url 'waiting_pig_list_details' pig_id=pig_data.id %}" id="main_form">
+{% csrf_token %}
+    <div class="row border text-center pb-3" id="main_pig">
         <div class="col-md-4 p-3">
             <div class="input-group input-group">
                 <span class="input-group-text">Imię:</span>
-                <input type="text" class="form-control" name="pig-name" maxlength="150" id="id_pig-name" value="{{ pig_form.data.name }}">
+                <input type="text" class="form-control" name="pig-name" maxlength="150" id="id_pig-name" value="{{ pig_data.data.exhibitor_pig.name }}">
             </div>
         </div>
         <div class="col-md-4 p-3">
             <div class="input-group input-group">
                 <span class="input-group-text">Przydomek:</span>
-                <input type="text" class="form-control" name="pig-nickname" maxlength="150" id="id_pig-nickname" value="{{ pig_form.data.nickname }}">
+                <input type="text" class="form-control" name="pig-nickname" maxlength="150" id="id_pig-nickname" value="{{ pig_data.data.exhibitor_pig.nickname }}">
             </div>
         </div>
-        <div class="col-md-4 p-3" id="next_btn">
-                <button class="btn btn-outline-success w-100" type="button" id="check_pig">Dalej</button>
-        </div>
-        <div class="col-md-4 p-3" id="clear_btn">
-                <button class="btn btn-outline-warning w-100" type="button" id="clear_pig">Wyczyść</button>
+        <div class="col-md-4 p-3">
+            <div class="input-group input-group">
+                <span class="input-group-text">Właściciel:</span>
+                <input type="text" class="form-control" name="pig-owner" maxlength="150" id="id_pig-owner" value="{{ pig_data.data.exhibitor_pig.owner }}">
+            </div>
         </div>
         <div class="row tree">
             <div class="form-floating col-md-4">
-              <input type="date" placeholder="Data urodzenia" class="form-control {% if pig_form.errors.birth_date %}is-invalid{% endif %}" id="id_pig-birth_date" name="pig-birth_date" value="{{ pig_form.data.birth_date }}" required>
+              <input type="date" placeholder="Data urodzenia" class="form-control {% if pig_form.errors.birth_date %}is-invalid{% endif %}" id="id_pig-birth_date" name="pig-birth_date" value="{{ pig_data.data.exhibitor_pig.birth_date }}" required>
               <label for="id_pig-birth_date" class="form-label">Data urodzenia</label>
             </div>
             <div class="form col-md-4">
                   <select class="form-select {% if pig_form.errors.sex %}is-invalid{% endif %}" id="id_pig-sex" name="pig-sex" value="{{ pig_form.data.sex }}" required>
                     <option value="" selected disabled>Wybierz płeć świnki</option>
                     {% for value, label in pig_form.sex.field.choices %}
-                      <option value="{{ value }}" {% if value == pig_form.sex.value %}selected{% endif %}>{{ label }}</option>
+                      <option value="{{ value }}" {% if value == pig_data.data.exhibitor_pig.sex %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                   </select>
             </div>
@@ -272,7 +100,7 @@ $(document).ready(function () {
                   <select class="form-select {% if pig_form.errors.breed %}is-invalid{% endif %}" id="id_pig-breed" name="pig-breed" required>
                     <option value="" selected disabled>Wybierz rasę świnki</option>
                     {% for breed in pig_form.breed.field.queryset %}
-                      <option value="{{ breed.pk }}" {% if breed.pk == pig_form.breed.value %}selected{% endif %}>{{ breed.name }}</option>
+                      <option value="{{ breed.pk }}" {% if breed.name == pig_data.data.exhibitor_pig.breed %}selected{% endif %}>{{ breed.name }}</option>
                     {% endfor %}
                   </select>
             </div>
@@ -283,80 +111,74 @@ $(document).ready(function () {
                 <div class="col-md-2 m-0 p-0">
                     <select class="form-select form-select-sm m-0 p-0" id="id_pig-colors_0" name="pig-colors_0">
                         {% for value, select in pig_form.fields.colors.widget.widgets.0.choices %}
-                            <option value="{{ value }}">{{ select }}</option>
+                            <option value="{{ value }}" {% if value in pig_data.data.exhibitor_pig.colors %}selected{% endif %}>{{ select }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2 m-0 p-0">
                     <select class="form-select form-select-sm m-0 p-0" id="id_pig-colors_1" name="pig-colors_1">
                         {% for value, select in pig_form.fields.colors.widget.widgets.1.choices %}
-                            <option value="{{ value }}">{{ select }}</option>
+                            <option value="{{ value }}"  {% if value in pig_data.data.exhibitor_pig.colors %}selected{% endif %}>{{ select }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2 m-0 p-0">
                     <select class="form-select form-select-sm m-0 p-0" id="id_pig-colors_2" name="pig-colors_2">
                         {% for value, select in pig_form.fields.colors.widget.widgets.2.choices %}
-                            <option value="{{ value }}">{{ select }}</option>
+                            <option value="{{ value }}" {% if value in pig_data.data.exhibitor_pig.colors %}selected{% endif %}>{{ select }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2 m-0 p-0">
                     <select class="form-select form-select-sm m-0 p-0" id="id_pig-colors_3" name="pig-colors_3">
                         {% for value, select in pig_form.fields.colors.widget.widgets.3.choices %}
-                            <option value="{{ value }}">{{ select }}</option>
+                            <option value="{{ value }}" {% if value in pig_data.data.exhibitor_pig.colors %}selected{% endif %}>{{ select }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2 m-0 p-0">
                     <select class="form-select form-select-sm m-0 p-0" id="id_pig-colors_4" name="pig-colors_4">
                         {% for value, select in pig_form.fields.colors.widget.widgets.4.choices %}
-                            <option value="{{ value }}">{{ select }}</option>
+                            <option value="{{ value }}" {% if value in pig_data.data.exhibitor_pig.colors %}selected{% endif %}>{{ select }}</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
             <div class="form-floating col-md-4">
-                <input type="number" class="form-control" name="pig-birth_weight" maxlength="150" id="id_pig-birth_weight" value="{{ pig_form.data.birth_weight }}">
+                <input type="number" class="form-control" name="pig-birth_weight" maxlength="150" id="id_pig-birth_weight" value="{{ pig_data.data.exhibitor_pig.birth_weight }}">
                 <label for="id_pig-birth_weight" class="form-label pl-5">Waga urodzeniowa:</label>
             </div>
             <div class="form-floating col-md-4">
                 <select class="form-select {% if pig_form.errors.eye_color %}is-invalid{% endif %}" id="id_pig-eye_color" name="pig-eye_color" required>
                         <option value="" selected disabled>Wybierz kolor oczu</option>
                         {% for eye_color in pig_form.eye_color.field.queryset %}
-                          <option value="{{ eye_color.pk }}" {% if eye_color.pk == pig_form.eye_color.value %}selected{% endif %}>{{ eye_color.name }}</option>
+                          <option value="{{ eye_color.pk }}" {% if eye_color.name == pig_data.data.exhibitor_pig.eye_color %}selected{% endif %}>{{ eye_color.name }}</option>
                         {% endfor %}
                 </select>
             </div>
             <div class="form-floating col-md-4">
-                <input type="text" class="form-control" name="pig-breeder" maxlength="255" id="id_pig-breeder" value="{{ pig_form.data.breeder }}">
+                <input type="text" class="form-control" name="pig-breeder" maxlength="255" id="id_pig-breeder" value="{{ pig_data.data.exhibitor_pig.breeder }}">
                 <label for="id_pig-breeder" class="form-label pl-5">Hodowca</label>
             </div>
         </div>
     </div>
-    <div class="row border text-center tree">
+    <div class="row border text-center tree" id="last_info">
         <div class="col-lg-4  border border-secondary p-0">
             <div class="row-sm-6 p-3 border border-secondary parents" style="background-color:#f8dbff"> <!--MATKA-->
                 <div class="h1">MATKA</div>
-                <div id="ui-widget_0" class="input-group input-group-sm m-3">
-                    <label for="existing_female_pig_input_0" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success m-1" type="button" id="load_Pig_Btn_0">Załaduj</button>
-                    <input class="m-1" type="text" id="existing_female_pig_input_0" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success m-1" type="button" id="new_Pig_Btn_0">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_0">
                     <div class="input-group mb-3">
                         <span class="input-group-text" >Imię:</span>
-                        <input type="text" class="form-control" id="id_parent_0-name" name="parent_0-name" value="{{ parent_forms.0.data.name }}" required>
+                        <input type="text" class="form-control" id="id_parent_0-name" name="parent_0-name" value="{{ pig_data.data.exhibitor_parents.0.name }}" required>
                     </div>
                     <div class="input-group mb-3">
                         <span class="input-group-text" >Przydomek:</span>
-                        <input type="text" class="form-control" id="id_parent_0-nickname" name="parent_0-nickname" value="{{ parent_forms.0.data.nickname }}" required>
+                        <input type="text" class="form-control" id="id_parent_0-nickname" name="parent_0-nickname" value="{{ pig_data.data.exhibitor_parents.0.nickname }}" required>
                     </div>
                     <select class="form-select" id="id_parent_0-breed" name="parent_0-breed" required>
                         <option value="" selected disabled>Wybierz rasę świnki</option>
                         {% for breed in parent_forms.0.breed.field.queryset %}
-                            <option value="{{ breed.pk }}" {% if parent_forms.0.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                            <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.0.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                         {% endfor %}
                     </select>
                     <div class="row mt-3 mb-3">
@@ -366,35 +188,35 @@ $(document).ready(function () {
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_0-colors_0" name="parent_0-colors_0">
                                 {% for value, select in parent_forms.0.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.0.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_0-colors_1" name="parent_0-colors_1">
                                 {% for value, select in parent_forms.0.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.0.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_0-colors_2" name="parent_0-colors_2">
                                 {% for value, select in parent_forms.0.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.0.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_0-colors_3" name="parent_0-colors_3">
                                 {% for value, select in parent_forms.0.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.0.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_0-colors_4" name="parent_0-colors_4">
                                 {% for value, select in parent_forms.0.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.0.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -403,25 +225,19 @@ $(document).ready(function () {
             </div>
             <div class="row-sm-6 p-3 border border-secondary parents" style="background-color:#d6f1ff"> <!--OJCIEC-->
                 <div class="h1">OJCIEC</div>
-                <div id="ui-widget_1" class="input-group m-3">
-                    <label for="existing_male_pig_input_1" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success m-1" type="button" id="load_Pig_Btn_1">Załaduj</button>
-                    <input class="m-1" type="text" id="existing_male_pig_input_1" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success m-1" type="button" id="new_Pig_Btn_1">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_1">
                     <div class="input-group mb-3">
                         <span class="input-group-text" >Imię:</span>
-                        <input type="text" class="form-control" id="id_parent_1-name" name="parent_1-name" value="{{ parent_forms.1.data.name }}" required>
+                        <input type="text" class="form-control" id="id_parent_1-name" name="parent_1-name" value="{{ pig_data.data.exhibitor_parents.1.name }}" required>
                     </div>
                     <div class="input-group mb-3">
                         <span class="input-group-text" >Przydomek:</span>
-                        <input type="text" class="form-control" id="id_parent_1-nickname" name="parent_1-nickname" value="{{ parent_forms.1.data.nickname }}" required>
+                        <input type="text" class="form-control" id="id_parent_1-nickname" name="parent_1-nickname" value="{{ pig_data.data.exhibitor_parents.1.nickname }}" required>
                     </div>
                     <select class="form-select" id="id_parent_1-breed" name="parent_1-breed" required>
                         <option value="" selected disabled>Wybierz rasę świnki</option>
                         {% for breed in parent_forms.1.breed.field.queryset %}
-                            <option value="{{ breed.pk }}" {% if parent_forms.1.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                            <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.1.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                         {% endfor %}
                     </select>
                     <div class="row mt-3 mb-3">
@@ -431,35 +247,35 @@ $(document).ready(function () {
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_1-colors_0" name="parent_1-colors_0">
                                 {% for value, select in parent_forms.1.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.1.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_1-colors_1" name="parent_1-colors_1">
                                 {% for value, select in parent_forms.1.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.1.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_1-colors_2" name="parent_1-colors_2">
                                 {% for value, select in parent_forms.1.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.1.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_1-colors_3" name="parent_1-colors_3">
                                 {% for value, select in parent_forms.1.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.1.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_1-colors_4" name="parent_1-colors_4">
                                 {% for value, select in parent_forms.0.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.1.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -469,60 +285,54 @@ $(document).ready(function () {
         </div>
         <div class="col-lg-4 bg-primary border border-secondary">
             <div class="row p-1 border border-secondary grandparents" style="background-color:#f8dbff"> <!--MATKA-MATKI-->
-                <div id="ui-widget_2" class="input-group">
-                    <label for="existing_female_pig_input_2" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_2">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_female_pig_input_2" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_2">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_2">
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Imię:</span>
-                        <input type="text" class="form-control" id="id_parent_2-name" name="parent_2-name" value="{{ parent_forms.2.data.name }}">
+                        <input type="text" class="form-control" id="id_parent_2-name" name="parent_2-name" value="{{ pig_data.data.exhibitor_parents.2.name }}">
                     </div>
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Przydomek:</span>
-                        <input type="text" class="form-control" id="id_parent_2-nickname" name="parent_2-nickname" value="{{ parent_forms.2.data.nickname }}">
+                        <input type="text" class="form-control" id="id_parent_2-nickname" name="parent_2-nickname" value="{{ pig_data.data.exhibitor_parents.2.nickname }}">
                     </div>
                     <select class="form-select m-0 form-select-sm" id="id_parent_2-breed" name="parent_2-breed">
                         <option value="" selected disabled>Wybierz rasę świnki</option>
                         {% for breed in parent_forms.2.breed.field.queryset %}
-                            <option value="{{ breed.pk }}" {% if parent_forms.2.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                            <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.2.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                         {% endfor %}
                     </select>
                     <div class="row m-0">
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_2-colors_0" name="parent_2-colors_0">
                                 {% for value, select in parent_forms.2.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.2.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_2-colors_1" name="parent_2-colors_1">
                                 {% for value, select in parent_forms.2.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.2.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_2-colors_2" name="parent_2-colors_2">
                                 {% for value, select in parent_forms.2.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.2.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_2-colors_3" name="parent_2-colors_3">
                                 {% for value, select in parent_forms.2.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.2.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_2-colors_4" name="parent_2-colors_4">
                                 {% for value, select in parent_forms.2.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.2.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -530,60 +340,54 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary grandparents" style="background-color:#d6f1ff"> <!--OJCIEC-MATKI-->
-                <div id="ui-widget_3" class="input-group">
-                    <label for="existing_male_pig_input_3" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_3">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_male_pig_input_3" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_3">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_3">
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Imię:</span>
-                        <input type="text" class="form-control" id="id_parent_3-name" name="parent_3-name" value="{{ parent_forms.3.data.name }}">
+                        <input type="text" class="form-control" id="id_parent_3-name" name="parent_3-name" value="{{ pig_data.data.exhibitor_parents.3.name }}">
                     </div>
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Przydomek:</span>
-                        <input type="text" class="form-control" id="id_parent_3-nickname" name="parent_3-nickname" value="{{ parent_forms.3.data.nickname }}">
+                        <input type="text" class="form-control" id="id_parent_3-nickname" name="parent_3-nickname" value="{{ pig_data.data.exhibitor_parents.3.nickname }}">
                     </div>
                     <select class="form-select m-0 form-select-sm" id="id_parent_3-breed" name="parent_3-breed">
                         <option value="" selected disabled>Wybierz rasę świnki</option>
                         {% for breed in parent_forms.3.breed.field.queryset %}
-                            <option value="{{ breed.pk }}" {% if parent_forms.3.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                            <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.3.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                         {% endfor %}
                     </select>
                     <div class="row m-0">
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_3-colors_0" name="parent_3-colors_0">
                                 {% for value, select in parent_forms.3.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.3.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_3-colors_1" name="parent_3-colors_1">
                                 {% for value, select in parent_forms.3.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.3.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_3-colors_2" name="parent_3-colors_2">
                                 {% for value, select in parent_forms.3.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.3.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_3-colors_3" name="parent_3-colors_3">
                                 {% for value, select in parent_forms.3.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.3.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_3-colors_4" name="parent_2-colors_4">
                                 {% for value, select in parent_forms.3.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.3.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -591,60 +395,54 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary grandparents" style="background-color:#f8dbff"> <!--MATKA-OJCA-->
-                <div id="ui-widget_4" class="input-group">
-                    <label for="existing_female_pig_input_4" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_4">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_female_pig_input_4" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_4">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_4">
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Imię:</span>
-                        <input type="text" class="form-control" id="id_parent_4-name" name="parent_4-name" value="{{ parent_forms.4.data.name }}">
+                        <input type="text" class="form-control" id="id_parent_4-name" name="parent_4-name" value="{{ pig_data.data.exhibitor_parents.4.name }}">
                     </div>
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Przydomek:</span>
-                        <input type="text" class="form-control" id="id_parent_4-nickname" name="parent_4-nickname" value="{{ parent_forms.4.data.nickname }}">
+                        <input type="text" class="form-control" id="id_parent_4-nickname" name="parent_4-nickname" value="{{ pig_data.data.exhibitor_parents.4.nickname }}">
                     </div>
                     <select class="form-select m-0 form-select-sm" id="id_parent_4-breed" name="parent_4-breed">
                         <option value="" selected disabled>Wybierz rasę świnki</option>
                         {% for breed in parent_forms.4.breed.field.queryset %}
-                            <option value="{{ breed.pk }}" {% if parent_forms.4.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                            <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.4.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                         {% endfor %}
                     </select>
                     <div class="row m-0">
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_4-colors_0" name="parent_4-colors_0">
                                 {% for value, select in parent_forms.4.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.4.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_4-colors_1" name="parent_4-colors_1">
                                 {% for value, select in parent_forms.4.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.4.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_4-colors_2" name="parent_4-colors_2">
                                 {% for value, select in parent_forms.4.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.4.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_34-colors_3" name="parent_4-colors_3">
                                 {% for value, select in parent_forms.4.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.4.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_4-colors_4" name="parent_4-colors_4">
                                 {% for value, select in parent_forms.4.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.4.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -652,60 +450,54 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary grandparents" style="background-color:#d6f1ff"> <!--OJCIEC-OJCA-->
-                <div id="ui-widget_5" class="input-group">
-                    <label for="existing_male_pig_input_5" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_5">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_male_pig_input_5" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_5">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_5">
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Imię:</span>
-                        <input type="text" class="form-control" id="id_parent_5-name" name="parent_5-name" value="{{ parent_forms.5.data.name }}">
+                        <input type="text" class="form-control" id="id_parent_5-name" name="parent_5-name" value="{{ pig_data.data.exhibitor_parents.5.name }}">
                     </div>
                     <div class="input-group m-0 input-group-sm">
                         <span class="input-group-text" >Przydomek:</span>
-                        <input type="text" class="form-control" id="id_parent_5-nickname" name="parent_5-nickname" value="{{ parent_forms.5.data.nickname }}">
+                        <input type="text" class="form-control" id="id_parent_5-nickname" name="parent_5-nickname" value="{{ pig_data.data.exhibitor_parents.5.nickname }}">
                     </div>
                     <select class="form-select m-0 form-select-sm" id="id_parent_5-breed" name="parent_5-breed">
                         <option value="" selected disabled>Wybierz rasę świnki</option>
                         {% for breed in parent_forms.5.breed.field.queryset %}
-                            <option value="{{ breed.pk }}" {% if parent_forms.5.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                            <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.5.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                         {% endfor %}
                     </select>
                     <div class="row m-0">
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_5-colors_0" name="parent_5-colors_0">
                                 {% for value, select in parent_forms.5.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.5.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_5-colors_1" name="parent_5-colors_1">
                                 {% for value, select in parent_forms.5.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.5.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_5-colors_2" name="parent_5-colors_2">
                                 {% for value, select in parent_forms.5.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.5.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_5-colors_3" name="parent_5-colors_3">
                                 {% for value, select in parent_forms.5.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.5.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_5-colors_4" name="parent_5-colors_4">
                                 {% for value, select in parent_forms.5.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.5.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -715,22 +507,16 @@ $(document).ready(function () {
         </div>
         <div class="col-lg-4 bg-primary border-secondary">
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#f8dbff"> <!--MATKA-MATKI-MATKI-->
-                <div id="ui-widget_6" class="input-group">
-                    <label for="existing_female_pig_input_6" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_6">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_female_pig_input_6" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_6">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_6">
                     <div class="input-group m-0 input-group-sm">
 
-                        <input type="text" class="form-control" id="id_parent_6-name" name="parent_6-name" value="{{ parent_forms.6.data.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_6-name" name="parent_6-name" value="{{ pig_data.data.exhibitor_parents.6.name }}" placeholder="Imię">
 
-                        <input type="text" class="form-control" id="id_parent_6-nickname" name="parent_6-nickname" value="{{ parent_forms.6.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_6-nickname" name="parent_6-nickname" value="{{ pig_data.data.exhibitor_parents.6.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_6-breed" name="parent_6-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.6.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.6.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.6.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -738,35 +524,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_6-colors_0" name="parent_6-colors_0">
                                 {% for value, select in parent_forms.6.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.6.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_6-colors_1" name="parent_6-colors_1">
                                 {% for value, select in parent_forms.6.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.6.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_6-colors_2" name="parent_6-colors_2">
                                 {% for value, select in parent_forms.6.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.6.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_6-colors_3" name="parent_6-colors_3">
                                 {% for value, select in parent_forms.6.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.6.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_6-colors_4" name="parent_6-colors_4">
                                 {% for value, select in parent_forms.6.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.6.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -774,20 +560,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#d6f1ff"> <!--OJCIEC-MATKI-MATKI-->
-                <div id="ui-widget_7" class="input-group">
-                    <label for="existing_male_pig_input_7" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_7">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_male_pig_input_7" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_7">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_7">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_7-name" name="parent_7-name" value="{{ parent_forms.7.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_7-nickname" name="parent_7-nickname" value="{{ parent_forms.7.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_7-name" name="parent_7-name" value="{{ pig_data.data.exhibitor_parents.7.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_7-nickname" name="parent_7-nickname" value="{{ pig_data.data.exhibitor_parents.7.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_7-breed" name="parent_7-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.7.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.7.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.7.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -795,35 +575,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_7-colors_0" name="parent_7-colors_0">
                                 {% for value, select in parent_forms.7.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.7.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_7-colors_1" name="parent_7-colors_1">
                                 {% for value, select in parent_forms.7.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.7.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_7-colors_2" name="parent_7-colors_2">
                                 {% for value, select in parent_forms.7.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.7.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_7-colors_3" name="parent_7-colors_3">
                                 {% for value, select in parent_forms.7.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.7.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_7-colors_4" name="parent_7-colors_4">
                                 {% for value, select in parent_forms.7.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.7.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -831,20 +611,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#f8dbff"> <!--MATKA-OJCA-MATKI-->
-                <div id="ui-widget_8" class="input-group">
-                    <label for="existing_female_pig_input_8" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_8">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_female_pig_input_8" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_8">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_8">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_8-name" name="parent_8-name" value="{{ parent_forms.8.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_8-nickname" name="parent_8-nickname" value="{{ parent_forms.8.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_8-name" name="parent_8-name" value="{{ pig_data.data.exhibitor_parents.8.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_8-nickname" name="parent_8-nickname" value="{{ pig_data.data.exhibitor_parents.8.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_8-breed" name="parent_8-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.8.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.8.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.8.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -852,35 +626,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_8-colors_0" name="parent_8-colors_0">
                                 {% for value, select in parent_forms.8.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.8.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_8-colors_1" name="parent_8-colors_1">
                                 {% for value, select in parent_forms.8.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.8.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_8-colors_2" name="parent_8-colors_2">
                                 {% for value, select in parent_forms.8.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.8.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_8-colors_3" name="parent_8-colors_3">
                                 {% for value, select in parent_forms.8.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.8.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_8-colors_4" name="parent_8-colors_4">
                                 {% for value, select in parent_forms.8.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.8.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -888,20 +662,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#d6f1ff"> <!--OJCIEC-OJCA-MATKI-->
-                <div id="ui-widget_9" class="input-group">
-                    <label for="existing_male_pig_input_9" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_9">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_male_pig_input_9" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_9">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_9">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_9-name" name="parent_9-name" value="{{ parent_forms.9.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_9-nickname" name="parent_9-nickname" value="{{ parent_forms.9.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_9-name" name="parent_9-name" value="{{ pig_data.data.exhibitor_parents.9.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_9-nickname" name="parent_9-nickname" value="{{ pig_data.data.exhibitor_parents.9.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_9-breed" name="parent_9-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.9.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.9.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.9.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -909,35 +677,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_9-colors_0" name="parent_9-colors_0">
                                 {% for value, select in parent_forms.9.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.9.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_9-colors_1" name="parent_9-colors_1">
                                 {% for value, select in parent_forms.9.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.9.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_9-colors_2" name="parent_9-colors_2">
                                 {% for value, select in parent_forms.9.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.9.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_9-colors_3" name="parent_9-colors_3">
                                 {% for value, select in parent_forms.9.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.9.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_9-colors_4" name="parent_9-colors_4">
                                 {% for value, select in parent_forms.9.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.9.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -945,20 +713,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#f8dbff"> <!--MATKA-MATKI-OJCA-->
-                <div id="ui-widget_10" class="input-group">
-                    <label for="existing_female_pig_input_10" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_10">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_female_pig_input_10" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_10">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_10">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_10-name" name="parent_10-name" value="{{ parent_forms.10.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_10-nickname" name="parent_10-nickname" value="{{ parent_forms.10.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_10-name" name="parent_10-name" value="{{ pig_data.data.exhibitor_parents.10.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_10-nickname" name="parent_10-nickname" value="{{ pig_data.data.exhibitor_parents.10.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_10-breed" name="parent_10-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.10.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.10.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.10.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -966,35 +728,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_10-colors_0" name="parent_10-colors_0">
                                 {% for value, select in parent_forms.10.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.10.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_10-colors_1" name="parent_10-colors_1">
                                 {% for value, select in parent_forms.10.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.10.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_10-colors_2" name="parent_10-colors_2">
                                 {% for value, select in parent_forms.10.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.10.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_10-colors_3" name="parent_10-colors_3">
                                 {% for value, select in parent_forms.10.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.10.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_10-colors_4" name="parent_10-colors_4">
                                 {% for value, select in parent_forms.10.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.10.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1002,20 +764,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#d6f1ff"> <!--OJCIEC-MATKI-OJCA-->
-                <div id="ui-widget_11" class="input-group">
-                    <label for="existing_male_pig_input_11" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_11">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_male_pig_input_11" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_11">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_11">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_11-name" name="parent_11-name" value="{{ parent_forms.11.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_11-nickname" name="parent_11-nickname" value="{{ parent_forms.11.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_11-name" name="parent_11-name" value="{{ pig_data.data.exhibitor_parents.11.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_11-nickname" name="parent_11-nickname" value="{{ pig_data.data.exhibitor_parents.11.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_11-breed" name="parent_11-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.11.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.11.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.11.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -1023,35 +779,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_11-colors_0" name="parent_11-colors_0">
                                 {% for value, select in parent_forms.11.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.11.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_11-colors_1" name="parent_11-colors_1">
                                 {% for value, select in parent_forms.11.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.11.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_11-colors_2" name="parent_11-colors_2">
                                 {% for value, select in parent_forms.11.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.11.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_11-colors_3" name="parent_11-colors_3">
                                 {% for value, select in parent_forms.11.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.11.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_11-colors_4" name="parent_11-colors_4">
                                 {% for value, select in parent_forms.11.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.11.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1059,20 +815,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#f8dbff"> <!--MATKA-OJCA-OJCA-->
-                <div id="ui-widget_12" class="input-group">
-                    <label for="existing_female_pig_input_12" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_12">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_female_pig_input_12" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_12">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_12">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_12-name" name="parent_12-name" value="{{ parent_forms.12.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_12-nickname" name="parent_12-nickname" value="{{ parent_forms.12.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_12-name" name="parent_12-name" value="{{ pig_data.data.exhibitor_parents.12.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_12-nickname" name="parent_12-nickname" value="{{ pig_data.data.exhibitor_parents.12.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_12-breed" name="parent_12-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.12.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.12.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.12.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -1080,35 +830,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_12-colors_0" name="parent_12-colors_0">
                                 {% for value, select in parent_forms.12.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.12.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_12-colors_1" name="parent_12-colors_1">
                                 {% for value, select in parent_forms.12.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.12.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_12-colors_2" name="parent_12-colors_2">
                                 {% for value, select in parent_forms.12.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.12.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_12-colors_3" name="parent_12-colors_3">
                                 {% for value, select in parent_forms.12.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.12.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_12-colors_4" name="parent_12-colors_4">
                                 {% for value, select in parent_forms.12.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.12.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1116,20 +866,14 @@ $(document).ready(function () {
                 </div>
             </div>
             <div class="row p-1 border border-secondary great-grandparents" style="background-color:#d6f1ff"> <!--OJCIEC-OJCA-OJCA-->
-                <div id="ui-widget_13" class="input-group">
-                    <label for="existing_male_pig_input_13" class="visually-hidden">Znajdź świnkę:</label>
-                    <button class="btn btn-outline-success btn-sm" type="button" id="load_Pig_Btn_13">Załaduj</button>
-                    <input class="form-control form-control-sm" type="text" id="existing_male_pig_input_13" placeholder="Znajdź świnkę">
-                    <button class="btn btn-outline-success btn-sm" type="button" id="new_Pig_Btn_13">Dodaj nową</button>
-                </div>
                 <div id="Add_Parent_Pig_Form_13">
                     <div class="input-group m-0 input-group-sm">
-                        <input type="text" class="form-control" id="id_parent_13-name" name="parent_13-name" value="{{ parent_forms.13.data.name }}" placeholder="Imię">
-                        <input type="text" class="form-control" id="id_parent_13-nickname" name="parent_13-nickname" value="{{ parent_forms.13.data.nickname }}" placeholder="Przydomek">
+                        <input type="text" class="form-control" id="id_parent_13-name" name="parent_13-name" value="{{ pig_data.data.exhibitor_parents.13.name }}" placeholder="Imię">
+                        <input type="text" class="form-control" id="id_parent_13-nickname" name="parent_13-nickname" value="{{ pig_data.data.exhibitor_parents.13.nickname }}" placeholder="Przydomek">
                         <select class="form-select m-0 form-select-sm" id="id_parent_13-breed" name="parent_13-breed">
                             <option value="" selected disabled>Rasa</option>
                             {% for breed in parent_forms.13.breed.field.queryset %}
-                                <option value="{{ breed.pk }}" {% if parent_forms.13.data.breed.pk == breed.pk %}selected{% endif %}>{{ breed.name }}</option>
+                                <option value="{{ breed.pk }}" {% if pig_data.data.exhibitor_parents.13.breed == breed.name %}selected{% endif %}>{{ breed.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -1137,35 +881,35 @@ $(document).ready(function () {
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_13-colors_0" name="parent_13-colors_0">
                                 {% for value, select in parent_forms.13.fields.colors.widget.widgets.0.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.13.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_13-colors_1" name="parent_13-colors_1">
                                 {% for value, select in parent_forms.13.fields.colors.widget.widgets.1.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.13.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_13-colors_2" name="parent_13-colors_2">
                                 {% for value, select in parent_forms.13.fields.colors.widget.widgets.2.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.13.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_13-colors_3" name="parent_13-colors_3">
                                 {% for value, select in parent_forms.13.fields.colors.widget.widgets.3.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.13.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3 m-0 p-0">
                             <select class="form-select form-select-sm m-0 p-0" id="id_parent_13-colors_4" name="parent_13-colors_4">
                                 {% for value, select in parent_forms.13.fields.colors.widget.widgets.4.choices %}
-                                    <option value="{{ value }}">{{ select }}</option>
+                                    <option value="{{ value }}" {% if value in pig_data.data.exhibitor_parents.13.colors %}selected{% endif %}>{{ select }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1175,7 +919,9 @@ $(document).ready(function () {
         </div>
     </div>
     <div class="col-12 mb-5 mt-5 text-center tree">
-      <button type="submit" class="btn btn-lg btn-primary" id="send_btn">Dodaj świnkę</button>
+      <button type="button" class="btn btn-lg btn-warning" id="edit_btn">Edytuj</button>
+      <button type="submit" class="btn btn-lg btn-success" id="accept_btn">Zaakceptuj</button>
+      <button type="button" class="btn btn-lg btn-danger" id="delete_btn">Usuń</button>
     </div>
 </form>
 {% endblock %}

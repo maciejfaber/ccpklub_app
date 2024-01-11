@@ -1,5 +1,5 @@
 from pathlib import Path
-from google.oauth2 import service_account
+#from google.oauth2 import service_account
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
@@ -108,14 +108,14 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static/'
 
-GS_CREDENTIALS = service_account.Credentials.from_service_account_file(BASE_DIR / 'credential.json')
+#GS_CREDENTIALS = service_account.Credentials.from_service_account_file(BASE_DIR / 'credential.json')
 
-DEFAULT_FILE_STORAGE = 'app.gcloud.GoogleCloudMediaFileStorage'
-GS_PROJECT_ID = 'ccpklubpl'
-GS_BUCKET_NAME = 'ccpklub'
-MEDIA_ROOT = 'media/'
-UPLOAD_ROOT = 'media/uploads/'
-MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
+# DEFAULT_FILE_STORAGE = 'app.gcloud.GoogleCloudMediaFileStorage'
+# GS_PROJECT_ID = 'ccpklubpl'
+# GS_BUCKET_NAME = 'ccpklub'
+# MEDIA_ROOT = 'media/'
+# UPLOAD_ROOT = 'media/uploads/'
+# MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
 
 # MEDIA_URL='/media/'
 # MEDIA_ROOT='/home/fabrosky1/domains/fabroskydjango.hmcloud.pl/StronaCCP/media'
