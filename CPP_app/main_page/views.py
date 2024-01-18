@@ -2,6 +2,7 @@ import json
 import os
 from datetime import date, datetime, timedelta
 
+from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.template import loader
@@ -13,10 +14,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import (NewsForm, CustomUserCreationForm, PigWDForm,
                     ConfirmDeleteUserForm, ContactForm, ReplyForm,
                     RegistrationForm, ExhibitorCreationForm,
-                    PigWZForm, ExhibitorAddPigForm, ExhibitorAddParentPigForm, ExistingPigForm)
+                    PigWZForm, ExhibitorAddPigForm, ExhibitorAddParentPigForm, ExistingPigForm, BreedingForm)
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib.auth.forms import PasswordChangeForm
 from django.views import View
 from django.conf import settings
@@ -30,6 +31,15 @@ import html
 def my_profile(request):
     user = request.user
     return render(request, 'my_profile.html', {'user': user})
+
+
+def group_required(group_name):
+    def in_group(user):
+        if user.groups.filter(name=group_name).exists():
+            return True
+        else:
+            raise PermissionDenied
+    return user_passes_test(in_group)
 
 
 def not_login_required(view_func):
@@ -153,6 +163,7 @@ def change_password(request):
     return render(request, 'change_password.html', {'form': form})
 
 
+@method_decorator(login_required, name='dispatch')
 class InactiveUserListView(View):
     template_name = 'inactive_user_list.html'
 
@@ -161,6 +172,7 @@ class InactiveUserListView(View):
         return render(request, self.template_name, {'inactive_users': inactive_users})
 
 
+@method_decorator(login_required, name='dispatch')
 class UserDetailsView(View):
     template_name = 'user_details.html'
 
@@ -180,7 +192,7 @@ class UserDetailsView(View):
 
     def get(self, request, user_id):
         user = get_object_or_404(User, id=user_id)
-        return render(request, self.template_name, {'user': user})
+        return render(request, self.template_name, {'waiting_user': user})
 
     def post(self, request, user_id):
         user = get_object_or_404(User, id=user_id)
@@ -204,13 +216,14 @@ class UserDetailsView(View):
             return redirect('confirm_delete_user', user_id=user.id)
 
 
+@method_decorator(login_required, name='dispatch')
 class ConfirmDeleteUserView(View):
     template_name = 'confirm_delete_user.html'
 
     def get(self, request, user_id):
         user = get_object_or_404(User, id=user_id)
         form = ConfirmDeleteUserForm()
-        return render(request, self.template_name, {'user': user, 'form': form})
+        return render(request, self.template_name, {'waiting_user': user, 'form': form})
 
     def post(self, request, user_id):
         user = get_object_or_404(User, id=user_id)
@@ -233,7 +246,7 @@ class ConfirmDeleteUserView(View):
 
             return redirect('inactive_user_list')
 
-        return render(request, self.template_name, {'user': user, 'form': form})
+        return render(request, self.template_name, {'waiting_user': user, 'form': form})
 
 
 def contact(request):
@@ -251,6 +264,7 @@ def contact(request):
     return render(request, 'contact_form.html', {'form': form, 'message_sent': message_sent})
 
 
+@method_decorator(login_required, name='dispatch')
 def message_list(request):
     messages = Message.objects.all().order_by('-timestamp')
     unread_messages_count = Message.objects.filter(reply_sent=False).count()
@@ -261,6 +275,7 @@ def message_list(request):
                                                  'total_messages_count': total_messages_count})
 
 
+@login_required
 def reply_or_detail_message(request, message_id):
     original_message = get_object_or_404(Message, pk=message_id)
 
@@ -298,24 +313,25 @@ def exhibitor_add_pig(request):
 
     if request.method == 'POST':
         if request.user.role == 'WD':
-            form = PigWDForm(request.POST, request.FILES, owner=request.user.id)
+            form = PigWDForm(request.POST, request.FILES, owner=request.user)
         else:
-            form = PigWZForm(request.POST, request.FILES, owner=request.user.id)
+            form = PigWZForm(request.POST, request.FILES, owner=request.user)
 
         if form.is_valid():
             form.save()
             return redirect('exhibitor_my_pigs')
     else:
         if request.user.role == 'WD':
-            form = PigWDForm()
+            form = PigWDForm(owner=request.user)
         else:
-            form = PigWZForm()
+            form = PigWZForm(owner=request.user)
 
     return render(request, template, {'form': form,
                                       'min_date': min_date.strftime('%Y-%m-%d'),
                                       'max_date': max_date.strftime('%Y-%m-%d')})
 
 
+@login_required
 def add_news(request):
     if request.method == 'POST':
         form = NewsForm(request.POST, request.FILES)
@@ -328,6 +344,7 @@ def add_news(request):
     return render(request, 'add_news.html', {'form': form})
 
 
+@login_required
 def exhibitor_my_pigs(request):
     if request.method == 'POST':
         delete_pig_id = request.POST.get('delete_pig_id')
@@ -341,6 +358,7 @@ def exhibitor_my_pigs(request):
     return render(request, 'exhibitor_my_pigs.html', {'user_pigs': user_pigs})
 
 
+@login_required
 def exhibitor_pig_detail(request, pig_id):
     pig = get_object_or_404(Pig, id=pig_id)
 
@@ -420,6 +438,7 @@ class CustomJSONEncoder(DjangoJSONEncoder):
         return json.loads(json_string)
 
 
+@login_required
 def breeder_add_pig(request):
     parent_forms = [ExhibitorAddParentPigForm(prefix=f'parent_{i}') for i in range(14)]
     pig_form = ExhibitorAddPigForm(prefix='pig')
@@ -434,8 +453,8 @@ def breeder_add_pig(request):
         existing_pig_form = ExistingPigForm(request.POST)
 
         if pig_form.is_valid() and all(form.is_valid() for form in parent_forms):
-            user_breeding = Breeding.objects.filter(owners=request.user).first()
-            pig_form.cleaned_data['owner'] = user_breeding
+            user_breeding = Breeding.objects.filter(owners=request.user).values('name').first()
+            pig_form.cleaned_data['owner'] = user_breeding['name']
             data = {
                 'exhibitor_pig': pig_form.cleaned_data,
                 'exhibitor_parents': [{'id': i + 1, **form.cleaned_data} for i, form in enumerate(parent_forms)]
@@ -478,6 +497,7 @@ def breeder_add_pig(request):
                                                     'all_female_pigs': all_female_pigs})
 
 
+@login_required
 def display_waiting_pigs(request):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # TODO
     json_file_path = os.path.join(base_dir, 'waiting_pig_list.json')
@@ -502,28 +522,7 @@ def display_waiting_pigs(request):
     return render(request, 'waiting_pig_list.html', {'waiting_pigs': data})
 
 
-# def display_waiting_pig_details(request, pig_id):
-#     parent_forms = [ExhibitorAddParentPigForm(prefix=f'parent_{i}') for i in range(14)]
-#     pig_form = ExhibitorAddPigForm(prefix='pig')
-#
-#     with open('waiting_pig_list.json', 'r') as json_file:
-#         for line in json_file:
-#             try:
-#                 row_data = json.loads(line)
-#                 current_pig_id = row_data.get('id')
-#
-#                 if current_pig_id == pig_id:
-#                     return render(request, 'waiting_pig_list_details.html', {'parent_forms': parent_forms,
-#                                                                              'pig_form': pig_form,
-#                                                                              'pig_data': row_data})
-#             except json.JSONDecodeError as e:
-#                 return render(request, 'json_error.html', {'error_message': str(e)})
-#
-#     return HttpResponse("Nie znaleziono świńki o podanym ID.")
-
-
 def add_parent_pig(pig_data, sex, mother, father):
-    print(pig_data)
     pig_info = Pig.objects.filter(name=pig_data['name'], nickname=pig_data['nickname'], breed=pig_data['breed']).first()
     if mother:
         mother_data = Pig.objects.filter(name=mother['name'], nickname=mother['nickname'], breed=mother['breed']).first()
@@ -534,8 +533,6 @@ def add_parent_pig(pig_data, sex, mother, father):
     else:
         father_data = None
     if pig_info:
-        if pig_info.mother and pig_info.father:
-            print("Świnka ma dodanych rodziców")
         if father_data and mother_data:
             pig_info.mother = mother_data
             pig_info.father = father_data
@@ -564,6 +561,9 @@ def add_parent_pig(pig_data, sex, mother, father):
 
 
 def add_pig(pig_data, mother, father):
+    breeding = Breeding.objects.filter(name=pig_data['owner']).values('owners')
+    owner_ids = [item['owners'] for item in breeding]
+    owners = User.objects.filter(id__in=owner_ids)
     pig_info = Pig.objects.filter(name=pig_data['name'], nickname=pig_data['nickname'], breed=pig_data['breed']).first()
     if mother:
         mother_data = Pig.objects.filter(name=mother['name'], nickname=mother['nickname'], breed=mother['breed']).first()
@@ -583,11 +583,14 @@ def add_pig(pig_data, mother, father):
             pig_info.birth_weight = pig_data['birth_weight']
         if not pig_info.eye_color:
             pig_info.eye_color = pig_data['eye_color']
-        if not pig_info.owner:
-            pig_info.owner = pig_data['owner']
         if not pig_info.breeder:
             pig_info.breeder = pig_data['breeder']
-        pig_info.save()
+        if not pig_info.owner:
+            pig_info.save()
+            for owner in owners:
+                pig_info.owner.add(owner)
+        else:
+            pig_info.save()
     else:
         if mother and father:
             pig = Pig(
@@ -602,9 +605,11 @@ def add_pig(pig_data, mother, father):
                 birth_weight=pig_data['birth_weight'],
                 eye_color=pig_data['eye_color'],
                 breeder=pig_data['breeder'],
-                owner=pig_data['owner'],
+                is_in_breeding=True
             )
             pig.save()
+            for owner in owners:
+                pig.owner.add(owner)
         else:
             pig = Pig(
                 name=pig_data['name'],
@@ -616,11 +621,14 @@ def add_pig(pig_data, mother, father):
                 birth_weight=pig_data['birth_weight'],
                 eye_color=pig_data['eye_color'],
                 breeder=pig_data['breeder'],
-                owner=pig_data['owner'],
+                is_in_breeding=True
             )
             pig.save()
+            for owner in owners:
+                pig.owner.add(owner)
 
 
+@login_required
 def display_waiting_pig_details(request, pig_id):
     parent_forms = [ExhibitorAddParentPigForm(prefix=f'parent_{i}') for i in range(14)]
     pig_form = ExhibitorAddPigForm(prefix='pig')
@@ -644,8 +652,14 @@ def display_waiting_pig_details(request, pig_id):
             pig_info = Pig.objects.filter(name=pig_data['name'],
                                           nickname=pig_data['nickname'],
                                           breed=pig_data['breed']).first()
+            # pig_info2 = Pig.objects.filter(name='Rakija',
+            #                               nickname='Coco Cavia').first()
+            # print(pig_info.owner.all().exists())
+            # print(pig_info2)
+            # print(pig_info2.owner.all().exists())
+            # print(pig_data.get('owner'))
 
-            if pig_info and pig_info.owner != '' and pig_info.owner is not None and pig_info.owner != pig_data.get('owner'):
+            if pig_info and pig_info.owner.all().exists() and pig_info.owner != pig_data.get('owner'):
                     print("Edytujący świnkę nie jest jej właścicielem")
                     print("Nie można edytować nie swojej świnki")
                     print("Należy wysłać użytkownikowi maila z informacją o właścicielu")  #TODO
@@ -653,26 +667,41 @@ def display_waiting_pig_details(request, pig_id):
                 if parents_complete[0] and parents_complete[1]:
                     if parents_complete[2] and parents_complete[3]:
                         if parents_complete[6] and parents_complete[7]:
-                            add_parent_pig(parent_data[6], 'Female')
-                            add_parent_pig(parent_data[7], 'Male')
+                            add_parent_pig(parent_data[6], 'Female', None, None)
+                            add_parent_pig(parent_data[7], 'Male', None, None)
                         if parents_complete[8] and parents_complete[9]:
-                            add_parent_pig(parent_data[8], 'Female')
-                            add_parent_pig(parent_data[9], 'Male')
+                            add_parent_pig(parent_data[8], 'Female', None, None)
+                            add_parent_pig(parent_data[9], 'Male', None, None)
                         add_parent_pig(parent_data[2], 'Female', parent_data[6], parent_data[7])
                         add_parent_pig(parent_data[3], 'Male', parent_data[8], parent_data[9])
                     if parents_complete[4] and parents_complete[5]:
                         if parents_complete[10] and parents_complete[11]:
-                            add_parent_pig(parent_data[10], 'Female')
-                            add_parent_pig(parent_data[11], 'Male')
+                            add_parent_pig(parent_data[10], 'Female', None, None)
+                            add_parent_pig(parent_data[11], 'Male', None, None)
                         if parents_complete[12] and parents_complete[13]:
-                            add_parent_pig(parent_data[12], 'Female')
-                            add_parent_pig(parent_data[13], 'Male')
+                            add_parent_pig(parent_data[12], 'Female', None, None)
+                            add_parent_pig(parent_data[13], 'Male', None, None)
                         add_parent_pig(parent_data[4], 'Female', parent_data[10], parent_data[11])
                         add_parent_pig(parent_data[5], 'Male', parent_data[12], parent_data[13])
                     add_parent_pig(parent_data[0], 'Female', parent_data[2], parent_data[3])
                     add_parent_pig(parent_data[1], 'Male', parent_data[4], parent_data[5])
                 add_pig(pig_data, parent_data[0], parent_data[1])
             print("Można usunąć wiersz z pliku json") #TODO
+            try:
+                pig_id = int(pig_id)
+                with open('waiting_pig_list.json', 'r') as json_file, open('temp_waiting_pig_list.json', 'w') as temp_file:
+                    for line in json_file:
+                        try:
+                            row_data = json.loads(line)
+                            current_pig_id = row_data.get('id')
+                            if current_pig_id != pig_id:
+                                temp_file.write(json.dumps(row_data) + '\n')
+                        except json.JSONDecodeError as e:
+                            return JsonResponse({'status': 'error', 'error_message': str(e)})
+                with open('waiting_pig_list.json', 'w') as json_file:
+                    json_file.writelines(open('temp_waiting_pig_list.json').readlines())
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'error_message': str(e)})
             return redirect('waiting_pig_list')
         else:
             print("Pig form is not valid")
@@ -723,3 +752,42 @@ class delete_waiting_pig(View):
         except Exception as e:
             return JsonResponse({'status': 'error', 'error_message': str(e)})
 
+
+class add_breeding(View):
+    message_sent = False
+    def get(self, request):
+        form = BreedingForm(request=request)
+        return render(request, 'add_breeding.html', {'form': form})
+
+    def post(self, request, message_sent=None):
+        form = BreedingForm(request.POST, request=request)
+        if form.is_valid():
+            form.save()
+            message_sent = True
+        return render(request, 'add_breeding.html', {'form': form, 'message_sent': message_sent})
+
+
+@login_required
+def breeder_my_pigs(request):
+    # if request.method == 'POST':
+    #     delete_pig_id = request.POST.get('delete_pig_id')
+    #     if delete_pig_id:
+    #         try:
+    #             pig_to_delete = Pig.objects.get(id=delete_pig_id)
+    #             pig_to_delete.delete()
+    #         except Pig.DoesNotExist:
+    #             pass
+    user_pigs = Pig.objects.filter(owner=request.user)
+    return render(request, 'breeder_my_pigs.html', {'user_pigs': user_pigs})
+
+
+@login_required
+def breeder_pig_detail(request, pig_id):
+    pig = get_object_or_404(Pig, id=pig_id)
+
+    if request.method == 'POST':
+        delete_pig_id = request.POST.get('delete_pig_id', None)
+        if delete_pig_id is not None:
+            pig.delete()
+            return redirect('breeder_my_pigs')
+    return render(request, 'breeder_pig_detail.html', {'pig': pig})

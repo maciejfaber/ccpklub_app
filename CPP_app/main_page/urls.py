@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from django.urls import path
+from django.views.generic import TemplateView
+
 from . import views
 from django.contrib import admin
 from django.conf.urls.static import static
@@ -36,9 +38,17 @@ urlpatterns = [
     path('exhibitor_pig_detail/<int:pig_id>/', views.exhibitor_pig_detail, name='exhibitor_pig_detail'),
     # breeder pigs
     path('breeder/add_pig/', views.breeder_add_pig, name='breeder_add_pig'),
+    path('breeder/my_pigs/', views.breeder_my_pigs, name='breeder_my_pigs'),
+    path('breeder_pig_detail/<int:pig_id>/', views.breeder_pig_detail, name='breeder_pig_detail'),
+
     path('get_parent_pig_info/', views.get_parent_pig_info, name='get_parent_pig_info'),
     path('get_pig_info/', views.get_pig_info, name='get_pig_info'),
     path('waiting_pig_list/', views.display_waiting_pigs, name='waiting_pig_list'),
     path('waiting_pig_list_details/<int:pig_id>/', views.display_waiting_pig_details, name='waiting_pig_list_details'),
     path('delete_waiting_pig/', views.delete_waiting_pig.as_view(), name='delete_waiting_pig'),
+
+    path('add_breeding/', views.add_breeding.as_view(), name='add_breeding'),
+
+    path('management/', TemplateView.as_view(template_name='management.html'), name='management'),
+    path('judging_committee/', TemplateView.as_view(template_name='judging_committee.html'), name='judging_committee'),
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

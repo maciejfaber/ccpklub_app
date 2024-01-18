@@ -6,7 +6,7 @@
         <h1>Szczegóły Świnki</h1>
 
         <div >
-            <strong>{{ pig.name }}  {% if user.username != pig.nickname %}}{{pig.nickname}}{% endif %}</strong><br>
+            <strong>{{ pig.name }}  {% if user.username != pig.nickname %} {{pig.nickname}}{% endif %}</strong><br>
             {% if pig.sex == "Male" %}
                 Płeć: Samiec<br>
             {% else %}
@@ -20,11 +20,11 @@
             {% if pig.registration_number != None %}Numer rejestracyjny CCP: {{ pig.registration_number }}<br>{% endif %}
 
 
-            <form method="post" action="{% url 'exhibitor_pig_detail' pig.id %}" class="mt-3 mb-3">
+            <form method="post" action="{% url 'breeder_pig_detail' pig.id %}" class="mt-3 mb-3">
                 {% csrf_token %}
                 <input type="hidden" name="delete_pig_id" value="{{ pig.id }}">
                 <button type="submit" class="btn btn-danger">Usuń</button>
-                <button type="button" class="btn btn-primary" onclick="window.location.href='{% url 'exhibitor_my_pigs' %}'">Powrót do listy</button>
+                <button type="button" class="btn btn-primary" onclick="window.location.href='{% url 'breeder_my_pigs' %}'">Powrót do listy</button>
             </form>
         </div>
 

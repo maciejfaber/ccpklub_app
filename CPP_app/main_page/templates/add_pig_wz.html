@@ -61,12 +61,12 @@
     </div>
 
     <div class="form-floating col-md-6">
-      <select class="form-select {% if form.errors.breed %}is-invalid{% endif %}" id="inputBreed" name="breed" required>
-        <option value="" selected disabled>Wybierz rasę świnki</option>
-        {% for breed in form.breed.field.queryset %}
-          <option value="{{ breed.pk }}" {% if breed.pk == form.breed.value %}selected{% endif %}>{{ breed.name }}</option>
-        {% endfor %}
-      </select>
+      <select class="form-select {% if pig_form.errors.breed %}is-invalid{% endif %}" id="inputBreed" name="breed" value="{{ form.data.breed }}" required>
+                    <option value="" selected disabled>Wybierz rasę świnki</option>
+                    {% for breed in form.breed.field.queryset %}
+                      <option value="{{ breed.pk }}" {% if breed.pk|stringformat:'s' == form.data.breed %}selected{% endif %}>{{ breed.name }}</option>
+                    {% endfor %}
+                  </select>
       {% if form.errors.breed %}
         <div class="text-danger">
           {% for error in form.errors.breed %}
@@ -75,10 +75,64 @@
         </div>
       {% endif %}
     </div>
-    {{ form.colors }}
-    {% for error in form.errors.colors %}
+      <div class="form-floating col-md-6">
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.name %}is-invalid{% endif %}" id="inputRegistration_number" name="registration_number" value="{{ form.data.registration_number }}">
+      <label for="inputRegistration_number" class="form-label">Numer rejestracyjny (Tylko świnki zarejestrowane w CCP)</label>
+      {% if form.errors.registration_number %}
+        <div class="alert alert-danger">
+          {% for error in form.errors.registration_number %}
             {{ error }}
-    {% endfor %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="row mt-3 mb-3" id="id_pig-colors">
+      <div class="col-md-2 m-0 pr-2 text-end">
+          Kolory:
+      </div>
+      <div class="col-md-2 m-0 p-0">
+          <select class="form-select form-select-sm m-0 p-0 {% if form.errors.colors %}is-invalid{% endif %}" id="id_colors_0" name="colors_0">
+              {% for value, select in form.fields.colors.widget.widgets.0.choices %}
+                  <option value="{{ value }}" {% if value == form.data.colors_0 %}selected{% endif %}>{{ select }}</option>
+              {% endfor %}
+          </select>
+      </div>
+      <div class="col-md-2 m-0 p-0">
+          <select class="form-select form-select-sm m-0 p-0 {% if form.errors.colors %}is-invalid{% endif %}" id="id_colors_1" name="colors_1">
+              {% for value, select in form.fields.colors.widget.widgets.1.choices %}
+                  <option value="{{ value }}" {% if value == form.data.colors_1 %}selected{% endif %}>{{ select }}</option>
+              {% endfor %}
+          </select>
+      </div>
+      <div class="col-md-2 m-0 p-0">
+          <select class="form-select form-select-sm m-0 p-0 {% if form.errors.colors %}is-invalid{% endif %}" id="id_colors_2" name="colors_2">
+              {% for value, select in form.fields.colors.widget.widgets.2.choices %}
+                  <option value="{{ value }}" {% if value == form.data.colors_2 %}selected{% endif %}>{{ select }}</option>
+              {% endfor %}
+          </select>
+      </div>
+      <div class="col-md-2 m-0 p-0">
+          <select class="form-select form-select-sm m-0 p-0 {% if form.errors.colors %}is-invalid{% endif %}" id="id_colors_3" name="colors_3">
+              {% for value, select in form.fields.colors.widget.widgets.3.choices %}
+                  <option value="{{ value }}" {% if value == form.data.colors_3 %}selected{% endif %}>{{ select }}</option>
+              {% endfor %}
+          </select>
+      </div>
+      <div class="col-md-2 m-0 p-0">
+          <select class="form-select form-select-sm m-0 p-0 {% if form.errors.colors %}is-invalid{% endif %}" id="id_colors_4" name="colors_4">
+              {% for value, select in form.fields.colors.widget.widgets.4.choices %}
+                  <option value="{{ value }}" {% if value == form.data.colors_4 %}selected{% endif %}>{{ select }}</option>
+              {% endfor %}
+          </select>
+      </div>
+        {% if form.errors.colors %}
+        <div class="text-danger">
+          {% for error in form.errors.colors %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+  </div>
     <div class="col-12 mb-5 mt-5 text-center">
       <button type="submit" class="btn btn-lg btn-primary">Dodaj świnkę</button>
     </div>
