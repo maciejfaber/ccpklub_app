@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 #from google.oauth2 import service_account
 
@@ -26,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main_page',
     'captcha',
+    'whitenoise'
 ]
 
 AUTH_USER_MODEL = 'main_page.User'
@@ -105,23 +107,9 @@ USE_L10N = True
 USE_TZ = True
 
 
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'static/'
-
-#GS_CREDENTIALS = service_account.Credentials.from_service_account_file(BASE_DIR / 'credential.json')
-
-# DEFAULT_FILE_STORAGE = 'app.gcloud.GoogleCloudMediaFileStorage'
-# GS_PROJECT_ID = 'ccpklubpl'
-# GS_BUCKET_NAME = 'ccpklub'
-# MEDIA_ROOT = 'media/'
-# UPLOAD_ROOT = 'media/uploads/'
-# MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
-
-# MEDIA_URL='/media/'
-# MEDIA_ROOT='/home/fabrosky1/domains/fabroskydjango.hmcloud.pl/StronaCCP/media'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -129,7 +117,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'maciejowskifaber@gmail.com'
+EMAIL_HOST_USER = '#########@gmail.com'
 EMAIL_HOST_PASSWORD = '########'
 
 RECAPTCHA_PUBLIC_KEY = '########################################'

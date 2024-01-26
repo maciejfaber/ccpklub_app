@@ -338,7 +338,7 @@ class Exhibition(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     judges = models.ManyToManyField('Judge', blank=True, related_name="Exhibition_judges")
-    address = models.CharField(null=True, blank=True)
+    address = models.CharField(null=True, blank=True, max_length=255)
     type = models.CharField(max_length=255, choices=TYPE_CHOICES, default='normal')
     fees = models.CharField(null=True, blank=False, max_length=255)
     entries = models.ForeignKey('Pig', related_name='Exhibition_pigs', on_delete=models.PROTECT)
