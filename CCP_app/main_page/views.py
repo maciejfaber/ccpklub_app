@@ -1,45 +1,31 @@
 import json
 import os
 from datetime import date, datetime, timedelta
-
-from django.core.exceptions import PermissionDenied
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.core.serializers.json import DjangoJSONEncoder
-from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
-from django.template import loader
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
+from django.views.generic.detail import SingleObjectMixin
+
 from .models import News, User, Message, Pig, Breed, EyeColor, Breeding
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import (NewsForm, CustomUserCreationForm, PigWDForm,
-                    ConfirmDeleteUserForm, ContactForm, ReplyForm,
+                    ContactForm, ReplyForm,
                     RegistrationForm, ExhibitorCreationForm,
-                    PigWZForm, ExhibitorAddPigForm, ExhibitorAddParentPigForm, ExistingPigForm, BreedingForm)
+                    PigWZForm, ExhibitorAddPigForm, ExhibitorAddParentPigForm, ExistingPigForm, BreedingForm,
+                    UserActionForm)
 from django.contrib import messages
-from django.contrib.auth import login, authenticate, update_session_auth_hash
-from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
 from django.views import View
+from django.views.generic import ListView, DetailView, FormView, CreateView
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils.html import escape
-import html
-
-
-@login_required
-def my_profile(request):
-    user = request.user
-    return render(request, 'my_profile.html', {'user': user})
-
-
-def group_required(group_name):
-    def in_group(user):
-        if user.groups.filter(name=group_name).exists():
-            return True
-        else:
-            raise PermissionDenied
-    return user_passes_test(in_group)
 
 
 def not_login_required(view_func):
@@ -51,130 +37,148 @@ def not_login_required(view_func):
     return _wrapped_view
 
 
-def not_admin_user(user):
-    return not user.is_superuser
+class UserDetailView(LoginRequiredMixin, DetailView):
+    model = User
+
+    def get_object(self, queryset=None):
+        return self.request.user
 
 
-def main(request):
-    if request.user.is_authenticated and 'logout' in request.path:
-        messages.success(request, "Zostałeś wylogowany.")
-        return redirect('logout')
-    elif request.user.is_authenticated:
-        template = loader.get_template('main.html')
-        news_list = News.objects.all().order_by('-creation_date')
-        context = {'news_list': news_list,
-                   'first_name': request.user.first_name,
-                   'last_name': request.user.last_name}
-        return HttpResponse(template.render(context, request))
-    else:
-        template = loader.get_template('main.html')
-        news_list = News.objects.all().order_by('-creation_date')
-        context = {'news_list': news_list}
-        return HttpResponse(template.render(context, request))
+class MainView(ListView):
+    model = News
+    queryset = News.objects.all().order_by('-creation_date')
 
 
-@not_login_required
-def register(request):
-    if request.method == 'POST':
-        registration_type_form = RegistrationForm(request.POST)
-        if registration_type_form.is_valid():
-            registration_type = registration_type_form.cleaned_data['registration_type']
-            if registration_type == 'member':
-                return redirect('member_register')
-            else:
-                return redirect('exhibitor_register')
-    else:
-        registration_type_form = RegistrationForm()
+class RegisterView(FormView):
+    template_name = 'main_page/register_form.html'
+    form_class = RegistrationForm
 
-    return render(request, 'register.html', {'registration_type_form': registration_type_form})
+    @method_decorator(not_login_required)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
-
-@not_login_required
-def member_register(request):
-    min_date = datetime.now() - timedelta(days=80 * 365)
-    max_date = datetime.now()
-    message_sent = False
-    email = None
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            form.save()
-            message_sent = True
-    else:
-        form = CustomUserCreationForm()
-    return render(request, 'member_register.html', {'form': form,
-                                                    'message_sent': message_sent,
-                                                    'email': email,
-                                                    'min_date': min_date.strftime('%Y-%m-%d'),
-                                                    'max_date': max_date.strftime('%Y-%m-%d')
-                                                    })
-
-
-@not_login_required
-def exhibitor_register(request):
-    min_date = datetime.now() - timedelta(days=80 * 365)
-    max_date = datetime.now()
-    message_sent = False
-    email = None
-    if request.method == 'POST':
-        form = ExhibitorCreationForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            form.save()
-            message_sent = True
-    else:
-        form = ExhibitorCreationForm()
-    return render(request, 'exhibitor_register.html', {'form': form,
-                                                       'message_sent': message_sent,
-                                                       'email': email,
-                                                       'min_date': min_date.strftime('%Y-%m-%d'),
-                                                       'max_date': max_date.strftime('%Y-%m-%d')
-                                                       })
-
-
-@not_login_required
-def login_view(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('Main')
+    def form_valid(self, form):
+        registration_type = form.cleaned_data['registration_type']
+        if registration_type == 'member':
+            return redirect('member_register')
         else:
-            messages.error(request, 'Nazwa użytkownika lub hasło są niepoprawne!')
-    return render(request, 'login.html')
+            return redirect('exhibitor_register')
+
+
+class MemberRegisterView(FormView):
+    template_name = 'main_page/member_register.html'
+    form_class = CustomUserCreationForm
+
+    @method_decorator(not_login_required)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.save()
+        email = form.cleaned_data['email']
+        context = {'success_message': email}
+        return self.render_to_response(context)
+
+    def form_invalid(self, form):
+        return self.render_to_response(self.get_context_data(form=form))
+
+
+class ExhibitorRegisterView(FormView):
+    template_name = 'main_page/exhibitor_register.html'
+    form_class = ExhibitorCreationForm
+
+    @method_decorator(not_login_required)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.save()
+        email = form.cleaned_data['email']
+        context = {'success_message': email}
+        return self.render_to_response(context)
+
+    def form_invalid(self, form):
+        return self.render_to_response(self.get_context_data(form=form))
+
+
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+    success_url = reverse_lazy('Main')
+    success_message = 'Zalogowano pomyślnie.'
+
+    @method_decorator(not_login_required)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
 
 @login_required
-def change_password(request):
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)  # Zaktualizuj sesję użytkownika
-            messages.success(request, 'Twoje hasło zostało zmienione.')
-            return redirect('my_profile')  # Przekierowanie na stronę "Moje dane" lub inną stronę
-        else:
-            messages.error(request, 'Proszę popraw błędy w formularzu.')
-    else:
-        form = PasswordChangeForm(request.user)
-    return render(request, 'change_password.html', {'form': form})
+def logout_view(request):
+    logout(request)
+    return redirect('Main')
 
 
-@method_decorator(login_required, name='dispatch')
-class InactiveUserListView(View):
-    template_name = 'inactive_user_list.html'
-
-    def get(self, request):
-        inactive_users = User.objects.filter(is_active=False)
-        return render(request, self.template_name, {'inactive_users': inactive_users})
+class CustomPasswordChangeView(PasswordChangeView):
+    template_name = 'main_page/change_password.html'
+    success_url = reverse_lazy('my_profile')
 
 
-@method_decorator(login_required, name='dispatch')
-class UserDetailsView(View):
+class InactiveUserListView(LoginRequiredMixin, ListView):
+    model = User
+    queryset = User.objects.filter(is_active=False)
+    template_name = 'main_page/inactive_user_list.html'
+    context_object_name = 'inactive_users'
+
+
+class UserDetailsView(LoginRequiredMixin, DetailView, FormView):
+
+    model = User
     template_name = 'user_details.html'
+    context_object_name = 'user'
+    form_class = UserActionForm
+
+    def get_object(self, queryset=None):
+        user_id = self.kwargs.get('user_id')
+        return get_object_or_404(User, id=user_id)
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        return self.render_to_response(self.get_context_data(object=self.object, form=form))
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        print(form)
+        print(self.form_valid(form))
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        user = self.get_object()
+        action = form.cleaned_data['action']
+        email_content = form.cleaned_data['email_content']
+        subject = ''
+        message = ''
+        if action == 'accept':
+            user.is_active = True
+            user.registration_number = self.generate_registration_number()
+            user.save()
+            subject = 'Twój konto został zaakceptowany'
+            message = (f'Twoje konto na stronie zostało zaakceptowane. Twój login to: '
+                       f'"{user.username}" Możesz się teraz zalogować używając hasła podanego podczas rejestracji.\n'
+                       f'{email_content}')
+        elif action == 'delete':
+            user.delete()
+            subject = 'Twój konto został usunięte'
+            message = (f'Twoje konto na stronie zostało usunięte.\n'
+                       f'{email_content}')
+
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [user.email]
+        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        return HttpResponseRedirect(reverse_lazy('inactive_user_list'))
 
     @staticmethod
     def generate_registration_number():
@@ -184,120 +188,67 @@ class UserDetailsView(View):
         if last_user:
             last_number = int(last_user.registration_number.split('/')[-1])
             new_number = str(last_number + 1).zfill(3)
-
         else:
             new_number = '001'
-
         return f'CCP/M/{current_year}/{new_number}'
 
-    def get(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
-        return render(request, self.template_name, {'waiting_user': user})
 
-    def post(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
-        action = request.POST.get('action')
+class ContactView(FormView):
+    template_name = "contact_form.html"
+    form_class = ContactForm
+    success_url = reverse_lazy('contact')
 
-        if action == 'accept':
-            user.is_active = True
-            user.save()
-
-            # Wysyłanie e-maila po zaakceptowaniu użytkownika
-            subject = 'Twój konto został zaakceptowany'
-            message = (f'Twoje konto na stronie zostało zaakceptowane. Twój login to: '
-                       f'"{user.username}" Możesz się teraz zalogować używając hasła podanego podczas rejestracji.')
-            from_email = settings.DEFAULT_FROM_EMAIL
-            recipient_list = [user.email]
-
-            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-
-            return redirect('inactive_user_list')
-        elif action == 'delete':
-            return redirect('confirm_delete_user', user_id=user.id)
+    def form_valid(self, form):
+        form.save()
+        context = {'message_sent': True}
+        return self.render_to_response(context)
 
 
-@method_decorator(login_required, name='dispatch')
-class ConfirmDeleteUserView(View):
-    template_name = 'confirm_delete_user.html'
+class MessageListView(LoginRequiredMixin, ListView):
+    model = Message
+    template_name = 'message_list.html'
+    context_object_name = 'messages'
+    ordering = ['-timestamp']
 
-    def get(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
-        form = ConfirmDeleteUserForm()
-        return render(request, self.template_name, {'waiting_user': user, 'form': form})
-
-    def post(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
-        form = ConfirmDeleteUserForm(request.POST)
-
-        if form.is_valid():
-            # Pobierz powód usunięcia z formularza
-            reason_for_deletion = form.cleaned_data['reason_for_deletion']
-
-            # Wysyłanie e-maila z powodem usunięcia
-            subject = 'Twoje konto zostało usunięte'
-            message = f'Twoje konto na stronie zostało usunięte z powodu: {reason_for_deletion}'
-            from_email = settings.DEFAULT_FROM_EMAIL
-            recipient_list = [user.email]
-
-            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-
-            # Usunięcie użytkownika
-            user.delete()
-
-            return redirect('inactive_user_list')
-
-        return render(request, self.template_name, {'waiting_user': user, 'form': form})
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['unread_messages_count'] = Message.objects.filter(reply_sent=False).count()
+        context['total_messages_count'] = Message.objects.count()
+        return context
 
 
-def contact(request):
-    message_sent = False
+class ReplyOrDetailMessageView(LoginRequiredMixin, FormView):
+    template_name = 'reply_or_detail_message.html'
+    form_class = ReplyForm
+    success_url = reverse_lazy('message_list')
 
-    if request.method == 'POST':
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            form.save()
-            form = ContactForm()
-            message_sent = True
-    else:
-        form = ContactForm()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        message_id = self.kwargs['message_id']
+        context['original_message'] = get_object_or_404(Message, pk=message_id)
+        return context
 
-    return render(request, 'contact_form.html', {'form': form, 'message_sent': message_sent})
+    def form_valid(self, form):
+        original_message = get_object_or_404(Message, pk=self.kwargs['message_id'])
+        title = form.cleaned_data['title']
+        content = form.cleaned_data['content']
+        recipient_list = [original_message.email]
+        from_email = settings.DEFAULT_FROM_EMAIL
+        html_content = render_to_string('email.html',
+                                        {'title': title, 'content': content,
+                                         'original_message': original_message})
+        if send_mail(title, '', from_email, recipient_list, html_message=html_content, fail_silently=False):
+            original_message.reply_sent = True
+            original_message.save()
+
+        return super().form_valid(form)
 
 
-@method_decorator(login_required, name='dispatch')
-def message_list(request):
-    messages = Message.objects.all().order_by('-timestamp')
-    unread_messages_count = Message.objects.filter(reply_sent=False).count()
-    total_messages_count = messages.count()
-
-    return render(request, 'message_list.html', {'messages': messages,
-                                                 'unread_messages_count': unread_messages_count,
-                                                 'total_messages_count': total_messages_count})
-
-
-@login_required
-def reply_or_detail_message(request, message_id):
-    original_message = get_object_or_404(Message, pk=message_id)
-
-    if request.method == 'POST':
-        form = ReplyForm(request.POST)
-        if form.is_valid():
-            title = form.cleaned_data['title']
-            content = form.cleaned_data['content']
-            recipient_list = [original_message.email]
-            from_email = settings.DEFAULT_FROM_EMAIL
-            html_content = render_to_string('email.html',
-                                            {'title': title, 'content': content,
-                                             'original_message': original_message})
-            if send_mail(title, '', from_email, recipient_list, html_message=html_content, fail_silently=False):
-                original_message.reply_sent = True
-                original_message.save()
-
-            return redirect('message_list')
-    else:
-        form = ReplyForm()
-
-    return render(request, 'reply_or_detail_message.html', {'form': form, 'original_message': original_message})
+class AddNewsView(LoginRequiredMixin, CreateView):
+    model = News
+    form_class = NewsForm
+    template_name = 'add_news.html'
+    success_url = reverse_lazy('Main')
 
 
 @login_required
@@ -331,43 +282,45 @@ def exhibitor_add_pig(request):
                                       'max_date': max_date.strftime('%Y-%m-%d')})
 
 
-@login_required
-def add_news(request):
-    if request.method == 'POST':
-        form = NewsForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('Main')
+class ExhibitorMyPigsView(LoginRequiredMixin, SingleObjectMixin, View):
+    model = Pig
+    template_name = 'exhibitor_my_pigs.html'
+    context_object_name = 'user_pigs'
 
-    else:
-        form = NewsForm()
-    return render(request, 'add_news.html', {'form': form})
+    def get(self, request, *args, **kwargs):
+        user_pigs = Pig.objects.filter(owner=self.request.user, is_active=True)
+        return render(request, self.template_name, {self.context_object_name: user_pigs})
 
-
-@login_required
-def exhibitor_my_pigs(request):
-    if request.method == 'POST':
+    def post(self, request, *args, **kwargs):
         delete_pig_id = request.POST.get('delete_pig_id')
         if delete_pig_id:
-            try:
-                pig_to_delete = Pig.objects.get(id=delete_pig_id)
-                pig_to_delete.delete()
-            except Pig.DoesNotExist:
-                pass
-    user_pigs = Pig.objects.filter(owner=request.user)
-    return render(request, 'exhibitor_my_pigs.html', {'user_pigs': user_pigs})
+            pig_to_delete = get_object_or_404(Pig, id=delete_pig_id, owner=self.request.user)
+            pig_to_delete.is_active = False
+            pig_to_delete.save()
+            messages.success(request, 'Świnia została usunięta.')
+        else:
+            messages.error(request, 'Nie udało się usunąć świnii.')
+
+        return redirect(reverse_lazy('exhibitor_my_pigs'))
 
 
-@login_required
-def exhibitor_pig_detail(request, pig_id):
-    pig = get_object_or_404(Pig, id=pig_id)
+class ExhibitorPigDetailView(LoginRequiredMixin, View):
+    template_name = 'exhibitor_pig_detail.html'
 
-    if request.method == 'POST':
+    def get(self, request, pig_id):
+        pig = get_object_or_404(Pig, id=pig_id)
+        return render(request, self.template_name, {'pig': pig})
+
+    def post(self, request, pig_id):
+        pig = get_object_or_404(Pig, id=pig_id)
         delete_pig_id = request.POST.get('delete_pig_id', None)
+
         if delete_pig_id is not None:
-            pig.delete()
+            pig.is_active = False
+            pig.save()
             return redirect('exhibitor_my_pigs')
-    return render(request, 'exhibitor_pig_detail.html', {'pig': pig})
+
+        return render(request, self.template_name, {'pig': pig})
 
 
 @csrf_protect
@@ -652,12 +605,6 @@ def display_waiting_pig_details(request, pig_id):
             pig_info = Pig.objects.filter(name=pig_data['name'],
                                           nickname=pig_data['nickname'],
                                           breed=pig_data['breed']).first()
-            # pig_info2 = Pig.objects.filter(name='Rakija',
-            #                               nickname='Coco Cavia').first()
-            # print(pig_info.owner.all().exists())
-            # print(pig_info2)
-            # print(pig_info2.owner.all().exists())
-            # print(pig_data.get('owner'))
 
             if pig_info and pig_info.owner.all().exists() and pig_info.owner != pig_data.get('owner'):
                     print("Edytujący świnkę nie jest jej właścicielem")
@@ -767,27 +714,25 @@ class add_breeding(View):
         return render(request, 'add_breeding.html', {'form': form, 'message_sent': message_sent})
 
 
-@login_required
-def breeder_my_pigs(request):
-    # if request.method == 'POST':
-    #     delete_pig_id = request.POST.get('delete_pig_id')
-    #     if delete_pig_id:
-    #         try:
-    #             pig_to_delete = Pig.objects.get(id=delete_pig_id)
-    #             pig_to_delete.delete()
-    #         except Pig.DoesNotExist:
-    #             pass
-    user_pigs = Pig.objects.filter(owner=request.user)
-    return render(request, 'breeder_my_pigs.html', {'user_pigs': user_pigs})
+class BreederMyPigsView(LoginRequiredMixin, ListView):
+    model = Pig
+    template_name = 'breeder_my_pigs.html'
+    context_object_name = 'user_pigs'
+
+    def get_queryset(self):
+        return Pig.objects.filter(owner=self.request.user, is_active=True)
 
 
-@login_required
-def breeder_pig_detail(request, pig_id):
-    pig = get_object_or_404(Pig, id=pig_id)
+class BreederPigDetailView(LoginRequiredMixin, DetailView):
+    model = Pig
+    template_name = 'breeder_pig_detail.html'
+    context_object_name = 'pig'
 
-    if request.method == 'POST':
+    def post(self, request, *args, **kwargs):
         delete_pig_id = request.POST.get('delete_pig_id', None)
         if delete_pig_id is not None:
-            pig.delete()
+            pig = self.get_object()
+            pig.is_active = False
+            pig.dave()
             return redirect('breeder_my_pigs')
-    return render(request, 'breeder_pig_detail.html', {'pig': pig})
+        return super().get(request, *args, **kwargs)

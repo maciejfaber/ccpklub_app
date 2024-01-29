@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="container mt-5">
+        <h1 class="mb-4">Mój profil</h1>
+        <p><strong>Login:</strong> {{ user.username }}</p>
+        <p><strong>Imię:</strong> {{ user.first_name }}</p>
+        <p><strong>Nazwisko:</strong> {{ user.last_name }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Kod pocztowy:</strong> {{ user.postal_code }}</p>
+        <!-- Dodaj pozostałe dane użytkownika -->
+    </div>
+{% endblock %}

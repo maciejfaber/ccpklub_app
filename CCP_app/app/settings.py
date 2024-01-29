@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from .email_settings import *
+
 #from google.oauth2 import service_account
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -31,7 +33,8 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = 'main_page.User'
-LOGIN_URL = '/login/'
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'Main'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -113,12 +116,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = '#########@gmail.com'
-EMAIL_HOST_PASSWORD = '########'
+EMAIL_BACKEND = EMAIL_BACKEND
+EMAIL_HOST = EMAIL_HOST
+EMAIL_PORT = EMAIL_PORT
+EMAIL_USE_TLS = EMAIL_USE_TLS
+EMAIL_HOST_USER = EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = EMAIL_HOST_PASSWORD
 
 RECAPTCHA_PUBLIC_KEY = '########################################'
 RECAPTCHA_PRIVATE_KEY = '########################################'

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% if message_sent %}
+{% if success_message %}
   <div class="d-flex flex-column align-items-center my-5">
     <h1>Dziękujemy!</h1>
     <p class="text-center">Po potwierdzeniu członkostwa przez zarząd oraz uiszczeniu wpłat
-    Twoje konto zostanie aktywowane. <br>Dalsze instrukcje zostaną wysłane na adres: <b>{{ email }}</b></p>
+    Twoje konto zostanie aktywowane. <br>Dalsze instrukcje zostaną wysłane na adres: <b>{{ success_message }}</b></p>
     <a href="{% url 'Main' %}" class="btn btn-success mt-3">Przejdź do strony głównej</a>
 </div>
 {% else %}
@@ -58,7 +58,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-4">
-      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}" min="{{ min_date }}" max="{{ max_date }}">
+      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}" min="{{ form.min_year }}" max="{{ form.max_year }}">
       <label for="inputBirthdate" class="form-label">Data urodzenia</label>
       {% if form.errors.birthdate %}
       <div class="alert alert-danger">

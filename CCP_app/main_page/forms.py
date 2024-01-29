@@ -1,8 +1,7 @@
 from django import forms
 from .models import News, User, Message, Pig, Breed, Color, EyeColor, Breeding
-from datetime import date
+from datetime import date, datetime, timedelta
 from django.contrib.auth.forms import UserCreationForm
-import datetime
 from django.contrib.auth import get_user_model
 import re
 
@@ -66,7 +65,7 @@ class RegistrationForm(forms.Form):
 
 
 class CustomUserCreationForm(UserCreationForm):
-    cur_year = datetime.datetime.today().year
+    cur_year = datetime.today().year
     year_range = tuple([i for i in range(cur_year - 90, cur_year - 10)])
     ROLE_CHOICES = [
         ('MI', 'Miłośnik'),
@@ -194,13 +193,14 @@ class CustomUserCreationForm(UserCreationForm):
 
 
 class ExhibitorCreationForm(UserCreationForm):
-    cur_year = datetime.datetime.today().year
-    year_range = tuple([i for i in range(cur_year - 90, cur_year - 10)])
+    today = datetime.today()
+    min_year = (today - timedelta(days=80 * 365)).strftime('%Y-%m-%d')
+    max_year = today.strftime('%Y-%m-%d')
     EX_CHOICES = [
         ('WZ', 'Wystawca Zagraniczny'),
         ('WD', 'Wystawca standardu D')
     ]
-    birthdate = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
+    birthdate = forms.DateField(label="Data urodzenia", required=False)
     phone_number = forms.CharField(max_length=15, label="Numer telefonu", required=False)
     town = forms.CharField(max_length=100, label="Miejscowość", required=False)
     postal_code = forms.CharField(max_length=10, label="Kod pocztowy", required=False)
@@ -273,8 +273,14 @@ class ExhibitorCreationForm(UserCreationForm):
         return last_name
 
 
-class ConfirmDeleteUserForm(forms.Form):
-    reason_for_deletion = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Powód usunięcia')
+class UserActionForm(forms.Form):
+    ACTION_CHOICES = [
+        ('accept', 'Akceptuj'),
+        ('delete', 'Usuń'),
+    ]
+
+    action = forms.ChoiceField(choices=ACTION_CHOICES)
+    email_content = forms.CharField(widget=forms.Textarea, required=False)
 
 
 class ReplyForm(forms.Form):
@@ -283,7 +289,7 @@ class ReplyForm(forms.Form):
 
 
 class PigWDForm(forms.ModelForm):
-    cur_year = datetime.datetime.today().year
+    cur_year = datetime.today().year
     year_range = tuple([i for i in range(cur_year - 10, cur_year+1)])
 
     name = forms.CharField(max_length=150, label="Imię", required=True)
@@ -333,7 +339,7 @@ class PigWDForm(forms.ModelForm):
 
 
 class PigWZForm(forms.ModelForm):
-    cur_year = datetime.datetime.today().year
+    cur_year = datetime.today().year
     year_range = tuple([i for i in range(cur_year - 10, cur_year+1)])
 
     name = forms.CharField(max_length=150, label="Imię", required=True)
@@ -399,7 +405,7 @@ class ExhibitorAddParentPigForm(forms.ModelForm):
 
 
 class ExhibitorAddPigForm(forms.ModelForm):
-    cur_year = datetime.datetime.today().year
+    cur_year = datetime.today().year
     year_range = tuple([i for i in range(cur_year - 10, cur_year + 1)])
 
     name = forms.CharField(max_length=150, label="Imię", required=False)

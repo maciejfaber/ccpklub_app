@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% if message_sent %}
+{% if success_message %}
   <div class="d-flex flex-column align-items-center my-5">
     <h1>Dziękujemy!</h1>
     <p class="text-center">Po potwierdzeniu członkostwa przez zarząd oraz uiszczeniu wpłat
-    Twoje konto zostanie aktywowane. <br>Dalsze instrukcje zostaną wysłane na adres: <b>{{ email }}</b></p>
+    Twoje konto zostanie aktywowane. <br>Dalsze instrukcje zostaną wysłane na adres: <b>{{ success_message }}</b></p>
     <a href="{% url 'Main' %}" class="btn btn-success mt-3">Przejdź do strony głównej</a>
 </div>
 {% else %}
