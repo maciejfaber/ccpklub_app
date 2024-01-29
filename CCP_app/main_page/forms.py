@@ -295,7 +295,6 @@ class PigWDForm(forms.ModelForm):
     name = forms.CharField(max_length=150, label="Imię", required=True)
     sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=True)
     birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
-    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
     nickname = forms.CharField(max_length=255, label="Przydomek", required=False)
 
     class Meta:
@@ -304,6 +303,12 @@ class PigWDForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.owner = kwargs.pop('owner', None)
+        self.fields['colors'] = forms.CharField(
+            max_length=255,
+            widget=PigColorWidget,
+            label="Umaszczenie",
+            required=False
+        )
         print(self.owner.username)
         super().__init__(*args, **kwargs)
 
@@ -347,7 +352,6 @@ class PigWZForm(forms.ModelForm):
     sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=True)
     birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=True)
     breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=True)
-    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
     registration_number = forms.CharField(max_length=25, label="Numer rejestracyjny", required=False)
 
     class Meta:
@@ -358,6 +362,12 @@ class PigWZForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.owner = kwargs.pop('owner', None)
+        self.fields['colors'] = forms.CharField(
+            max_length=255,
+            widget=PigColorWidget,
+            label="Umaszczenie",
+            required=False
+        )
         super().__init__(*args, **kwargs)
 
     def save(self, commit=True):
@@ -397,11 +407,20 @@ class ExhibitorAddParentPigForm(forms.ModelForm):
     name = forms.CharField(max_length=150, label="Imię", required=False)
     nickname = forms.CharField(max_length=150, label="Przydomek", required=False)
     breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=False)
-    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
 
     class Meta:
         model = Pig
         fields = ['name', 'nickname', 'breed', 'colors']
+
+    def __init__(self, *args, **kwargs):
+        self.fields['colors'] = forms.CharField(
+            max_length=255,
+            widget=PigColorWidget,
+            label="Umaszczenie",
+            required=False
+        )
+        super().__init__(*args, **kwargs)
+
 
 
 class ExhibitorAddPigForm(forms.ModelForm):
@@ -413,7 +432,6 @@ class ExhibitorAddPigForm(forms.ModelForm):
     sex = forms.ChoiceField(choices=Pig.SEX_CHOICE, label="Płeć", required=False)
     birth_date = forms.DateField(label="Data urodzenia", widget=forms.SelectDateWidget(years=year_range), required=False)
     breed = forms.ModelChoiceField(queryset=Breed.objects.all(), label="Rasa", required=False)
-    colors = forms.CharField(max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False)
     eye_color = forms.ModelChoiceField(queryset=EyeColor.objects.all(), label="Kolor oczu", required=False)
     owner = forms.CharField(max_length=255, label="Właściciel", required=False)
     breeder = forms.CharField(max_length=255, label="Hodowca", required=False)
@@ -423,6 +441,16 @@ class ExhibitorAddPigForm(forms.ModelForm):
         fields = ['name', 'nickname', 'sex', 'colors',
                   'birth_date', 'birth_weight', 'breed',
                   'eye_color', 'owner', 'breeder']
+
+    def __init__(self, *args, **kwargs):
+        self.fields['colors'] = forms.CharField(
+            max_length=255,
+            widget=PigColorWidget,
+            label="Umaszczenie",
+            required=False
+        )
+        super().__init__(*args, **kwargs)
+
 
     def clean_colors(self):
         pig_color_value = self.cleaned_data.get('colors')

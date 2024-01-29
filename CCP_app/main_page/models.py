@@ -148,9 +148,9 @@ class Breeding(models.Model):
     ]
     name = models.CharField(max_length=100, unique=True, null=False, blank=False)
     nickname = models.CharField(max_length=100, null=False, blank=False)
-    owners = models.ManyToManyField(User, blank=False, related_name='BREEDING_owners')
-    breeds = models.ManyToManyField(Breed, blank=False, related_name='BREEDING_breeds')
-    contact_breeder = models.ManyToManyField(User, blank=False, related_name='BREEDING_contact_breeder')
+    owners = models.ManyToManyField('User', blank=False, related_name='BREEDING_owners')
+    breeds = models.ManyToManyField('Breed', blank=False, related_name='BREEDING_breeds')
+    contact_breeder = models.ManyToManyField('User', blank=False, related_name='BREEDING_contact_breeder')
     name_position = models.CharField(max_length=10, choices=POSITION_CHOICES, default='after')
     purpose = models.TextField()
     www = models.CharField(max_length=200, null=True, blank=True)
