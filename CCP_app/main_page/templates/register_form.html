@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Wybierz rodzaj rejestracji:</h2>
+
+  <form method="post" action="{% url 'register' %}">
+    {% csrf_token %}
+    <button type="submit" name="registration_type" value="member">Zarejestruj się jako Hodowca lub Miłośnik</button><br>
+    <button type="submit" name="registration_type" value="exhibitor">Zarejestruj się jako Wystawca</button><br>
+  </form>
+{% endblock %}

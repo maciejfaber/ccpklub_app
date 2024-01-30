@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if success_message %}
+  <div class="d-flex flex-column align-items-center my-5">
+    <h1>Dziękujemy!</h1>
+    <p class="text-center">Po potwierdzeniu członkostwa przez zarząd oraz uiszczeniu wpłat
+    Twoje konto zostanie aktywowane. <br>Dalsze instrukcje zostaną wysłane na adres: <b>{{ success_message }}</b></p>
+    <a href="{% url 'Main' %}" class="btn btn-success mt-3">Przejdź do strony głównej</a>
+</div>
+{% else %}
+    <div class="container mt-5">
+  <h5 class="mb-4">Aby się zarejestrować trzeba uzupełnić wszystkie pola.</h5>
+  <form method="post" class="row g-3">
+    {% csrf_token %}
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.first_name %}is-invalid{% endif %}" id="inputFirstName" name="first_name" value="{{ form.data.first_name }}" required>
+      <label for="inputFirstName" class="form-label">Imię</label>
+      {% if form.errors.first_name %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.first_name %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Nazwisko" class="form-control {% if form.errors.last_name %}is-invalid{% endif %}" id="inputLastName" name="last_name" value="{{ form.data.last_name }}" required>
+      <label for="inputLastName" class="form-label">Nazwisko</label>
+      {% if form.errors.last_name %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.last_name %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="email" placeholder="Adres email" class="form-control {% if form.errors.email %}is-invalid{% endif %}" id="inputEmail" name="email" value="{{ form.data.email }}" required>
+      <label for="inputEmail" class="form-label">Adres email</label>
+      {% if form.errors.email %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.email %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="text" placeholder="Numer telefonu" class="form-control {% if form.errors.phone_number %}is-invalid{% endif %}" id="inputPhoneNumber" name="phone_number" value="{{ form.data.phone_number }}">
+      <label for="inputPhoneNumber" class="form-label">Numer telefonu</label>
+      {% if form.errors.phone_number %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.phone_number %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-4">
+      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}" min="{{ form.min_year }}" max="{{ form.max_year }}">
+      <label for="inputBirthdate" class="form-label">Data urodzenia</label>
+      {% if form.errors.birthdate %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.birthdate %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-4">
+      <select class="form-select {% if form.errors.role %}is-invalid{% endif %}" id="inputRole" name="role" value="{{ form.data.role }}" required>
+        <option value="" selected disabled>Wybierz swoją rolę</option>
+        {% for value, label in form.role.field.choices %}
+            <option value="{{ value }}" {% if value == form.role.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.role %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.role %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-4">
+      <select class="form-select {% if form.errors.club %}is-invalid{% endif %}" id="inputClub" name="club" value="{{ form.data.club }}" required>
+        <option value="" selected disabled>Wybierz swój klub</option>
+        {% for value, label in form.club.field.choices %}
+            <option value="{{ value }}" {% if value == form.club.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.club %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.club %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-4">
+      <select class="form-select {% if form.errors.country %}is-invalid{% endif %}" id="inputCountry" name="country" value="{{ form.data.country }}" required>
+        <option value="" selected disabled>Państwo</option>
+        {% for value, label in form.country.field.choices %}
+            <option value="{{ value }}" {% if value == form.country.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.country %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.country %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-4">
+      <input type="text" placeholder="Miejscowość" class="form-control  {% if form.errors.town %}is-invalid{% endif %}" id="inputTown" name="town" value="{{ form.data.town }}" >
+      <label for="inputTown" class="form-label">Miejscowość</label>
+      {% if form.errors.town %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.town %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-4">
+      <input type="text" placeholder="Kod pocztowy" class="form-control {% if form.errors.postal_code %}is-invalid{% endif %}" id="inputPostalCode" name="postal_code" value="{{ form.data.postal_code }}" >
+      <label for="inputPostalCode" class="form-label">Kod pocztowy</label>
+      {% if form.errors.postal_code %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.postal_code %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="password" placeholder="Hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="inputPassword" name="password1" required>
+      <label for="inputPassword" class="form-label">Hasło</label>
+      {% if form.errors.password2 %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.password2 %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="form-floating col-md-6">
+      <input type="password" placeholder="Potwierdź hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="confirmPassword" name="password2" required>
+      <label for="confirmPassword" class="form-label">Potwierdź hasło</label>
+    </div>
+    <div class="col-12 mb-5 mt-5 text-center">
+      <button type="submit" class="btn btn-lg btn-primary">Zarejestruj</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Klub Rasowych Świnek Morskich</title>
+    <!-- {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+	<script async defer crossorigin="anonymous" src="https://connect.facebook.net/pl_PL/sdk.js#xfbml=1&version=v18.0" nonce="gPMa3qKi"></script>
+</head>
+<body>
+    <div class="container">
+		<div class="row">
+			<div class="col-sm-12 p-0 border text-center bg-primary text-white">
+				<img class="img-fluid w-100" src="{% static 'img/baner.jpg' %}" alt="Baner">
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-12 border text-center bg-primary text-white p-0">
+				<nav class="navbar navbar-expand-lg navbar-light bg-light">
+					<div class="container p-0">
+						<!-- Przycisk rozwijania dla urządzeń mobilnych -->
+						<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+							<span class="navbar-toggler-icon"></span>
+						</button>
+						<div class="collapse navbar-collapse" id="navbarNav">
+							<ul class="navbar-nav">
+								<li class="nav-item">
+									<a class="nav-link fw-bold" href="{% url 'Main' %}">Strona Główna</a>
+								</li>
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="exhibitionsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										Wystawy
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="exhibitionsDropdown">
+										<li><a class="dropdown-item" href="#">Polskie</a></li>
+										<li><a class="dropdown-item" href="#">Zagraniczne</a></li>
+										<li><a class="dropdown-item" href="#">Zgłoszenia</a></li>
+									</ul>
+								</li>
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="breedingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										Hodowle
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="breedingDropdown">
+										<li><a class="dropdown-item" href="#">Polskie</a></li>
+										<li><a class="dropdown-item" href="#">Zagraniczne</a></li>
+										<li><a class="dropdown-item" href="#">Nieaktywne</a></li>
+										<li><a class="dropdown-item" href="#">Usunięte</a></li>
+									</ul>
+								</li>
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="documentsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										Dokumenty
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="documentsDropdown">
+										<li><a class="dropdown-item" href="#">Kandydat</a></li>
+										<li><a class="dropdown-item" href="#">Hodowca</a></li>
+									</ul>
+								</li>
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="rankingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										Rankingi
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="rankingsDropdown">
+										<li><a class="dropdown-item" href="#">Ranking hodowców</a></li>
+										<li><a class="dropdown-item" href="#">Ranking świnek</a></li>
+									</ul>
+								</li>
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="galleriesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										Galeria
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="galleriesDropdown">
+										<li><a class="dropdown-item" href="#">Wystawy</a></li>
+										<li><a class="dropdown-item" href="#">Świnki</a></li>
+									</ul>
+								</li>
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="lawDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										Organy
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="lawDropdown">
+										<li><a class="dropdown-item" href="{% url 'management' %}">Zarząd</a></li>
+										<li><a class="dropdown-item" href="{% url 'judging_committee' %}">Komisja sędziowska</a></li>
+									</ul>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link" href="{% url 'contact' %}">Kontakt</a>
+								</li>
+							</ul>
+							<ul class="navbar-nav ms-auto">
+								{% if user.is_authenticated %}
+								<li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+										{{ user.first_name }} {{ user.last_name }}
+									</a>
+									<ul class="dropdown-menu" aria-labelledby="userDropdown">
+										<li><a class="dropdown-item" href="{% url 'my_profile' %}">Moje dane</a></li>
+										{% if user.role == 'WD' or user.role == 'WZ' %}
+											<li><a class="dropdown-item" href="{% url 'exhibitor_my_pigs' %}">Moje Świnki</a></li>
+										{% else %}
+											<li><a class="dropdown-item" href="{% url 'breeder_my_pigs' %}">Moje Świnki</a></li>
+											<li><a class="dropdown-item" href="{% url 'breeder_add_pig' %}">Moja hodowla</a></li>
+										{% endif %}
+										<li><a class="dropdown-item" href="{% url 'logout' %}">Wyloguj się</a></li>
+									</ul>
+								</li>
+								{% else %}
+									<li class="nav-item">
+										<a class="nav-link" href="{% url 'login' %}">Zaloguj się</a>
+									</li>
+								{% endif %}
+							</ul>
+						</div>
+					</div>
+				</nav>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-12 border">
+				{% block content %}
+				{% endblock %}
+			</div>
+		</div>
+	</div>
+</body>
+</html>

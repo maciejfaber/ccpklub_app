@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% for news in news_list %}
+				<div class="news mt-2 text-center">
+				{% if news.title != None %}
+					<h2>{{ news.title }}</h2>
+				{% endif %}
+					<p>{{ news.content|safe }}</p>
+				{% if news.photo %}
+					<img class="img-fluid mx-auto" style="max-height: 600px;" src="{{ news.photo.url }}" alt="{{ news.title }}  Image">
+				{% endif %}
+					<p class="small" style="text-align: right;">Dodano: {{ news.creation_date|date:"j.n.Y" }}</p>
+					<hr class="wp-block-separator">
+				</div>
+				{% endfor %}
+{% endblock %}
