@@ -47,7 +47,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-6">
-      <input type="text" placeholder="Numer telefonu" class="form-control {% if form.errors.phone_number %}is-invalid{% endif %}" id="inputPhoneNumber" name="phone_number" value="{{ form.data.phone_number }}" required>
+      <input type="text" placeholder="Numer telefonu" class="form-control {% if form.errors.phone_number %}is-invalid{% endif %}" id="inputPhoneNumber" name="phone_number" value="{{ form.data.phone_number }}">
       <label for="inputPhoneNumber" class="form-label">Numer telefonu</label>
       {% if form.errors.phone_number %}
       <div class="alert alert-danger">
@@ -57,8 +57,8 @@
       </div>
       {% endif %}
     </div>
-    <div class="form-floating col-md-6">
-      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}" min="{{ min_date }}" max="{{ max_date }}" required>
+    <div class="form-floating col-md-4">
+      <input type="date" placeholder="Data urodzenia" class="form-control {% if form.errors.birthdate %}is-invalid{% endif %}" id="inputBirthdate" name="birthdate" value="{{ form.data.birthdate }}" min="{{ form.min_year }}" max="{{ form.max_year }}">
       <label for="inputBirthdate" class="form-label">Data urodzenia</label>
       {% if form.errors.birthdate %}
       <div class="alert alert-danger">
@@ -68,7 +68,7 @@
       </div>
       {% endif %}
     </div>
-    <div class="col-md-6">
+    <div class="col-md-4">
       <select class="form-select {% if form.errors.role %}is-invalid{% endif %}" id="inputRole" name="role" value="{{ form.data.role }}" required>
         <option value="" selected disabled>Wybierz swoją rolę</option>
         {% for value, label in form.role.field.choices %}
@@ -78,6 +78,21 @@
       {% if form.errors.role %}
       <div class="alert alert-danger">
         {% for error in form.errors.role %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-4">
+      <select class="form-select {% if form.errors.club %}is-invalid{% endif %}" id="inputClub" name="club" value="{{ form.data.club }}" required>
+        <option value="" selected disabled>Wybierz swój klub</option>
+        {% for value, label in form.club.field.choices %}
+            <option value="{{ value }}" {% if value == form.club.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if form.errors.club %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.club %}
             {{ error }}
         {% endfor %}
       </div>
@@ -99,7 +114,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-4">
-      <input type="text" placeholder="Miejscowość" class="form-control  {% if form.errors.town %}is-invalid{% endif %}" id="inputTown" name="town" value="{{ form.data.town }}" required>
+      <input type="text" placeholder="Miejscowość" class="form-control  {% if form.errors.town %}is-invalid{% endif %}" id="inputTown" name="town" value="{{ form.data.town }}" >
       <label for="inputTown" class="form-label">Miejscowość</label>
       {% if form.errors.town %}
       <div class="alert alert-danger">
@@ -110,7 +125,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-4">
-      <input type="text" placeholder="Kod pocztowy" class="form-control {% if form.errors.postal_code %}is-invalid{% endif %}" id="inputPostalCode" name="postal_code" value="{{ form.data.postal_code }}" required>
+      <input type="text" placeholder="Kod pocztowy" class="form-control {% if form.errors.postal_code %}is-invalid{% endif %}" id="inputPostalCode" name="postal_code" value="{{ form.data.postal_code }}" >
       <label for="inputPostalCode" class="form-label">Kod pocztowy</label>
       {% if form.errors.postal_code %}
       <div class="alert alert-danger">
@@ -134,19 +149,6 @@
     <div class="form-floating col-md-6">
       <input type="password" placeholder="Potwierdź hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="confirmPassword" name="password2" required>
       <label for="confirmPassword" class="form-label">Potwierdź hasło</label>
-    </div>
-
-    <div class="col-12">
-      <label for="inputQuestionnaire" class="form-label">Ankieta</label>
-      <textarea class="form-control {% if form.errors.questionnaire %}is-invalid{% endif %}" placeholder="Napisz nam dlaczego chcesz do nas dołączyć. Przedstaw swoje swoje świnki."
-                id="inputQuestionnaire" name="questionnaire" rows="6">{{ form.data.questionnaire }}</textarea>
-      {% if form.errors.questionnaire %}
-      <div class="alert alert-danger">
-        {% for error in form.errors.questionnaire %}
-            {{ error }}
-        {% endfor %}
-      </div>
-      {% endif %}
     </div>
     <div class="col-12 mb-5 mt-5 text-center">
       <button type="submit" class="btn btn-lg btn-primary">Zarejestruj</button>
