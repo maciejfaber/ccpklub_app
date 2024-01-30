@@ -167,5 +167,6 @@
   {"model": "main_page.breed", "pk": 61, "fields": {"name": "Nośnik Skinny", "polish_name": "Nośnik Skinny", "standard": "C"}},
   {"model": "main_page.breed", "pk": 62, "fields": {"name": "Nośnik Baldwin", "polish_name": "Nośnik Baldwin", "standard": "C"}},
   {"model": "main_page.breed", "pk": 63, "fields": {"name": "CUY", "polish_name": "CUY", "standard": "C"}},
-  {"model": "main_page.breed", "pk": 64, "fields": {"name": "PET (świnka domowa – pupil)", "polish_name": "PET (świnka domowa – pupil)", "standard": "C"}}
+  {"model": "main_page.breed", "pk": 64, "fields": {"name": "PET (świnka domowa – pupil)", "polish_name": "PET (świnka domowa – pupil)", "standard": "C"}},
+  {"model": "main_page.news", "pk": 1, "fields": {"title": "Witamy na stronie Cavies Club of Poland", "content": "<b>Stronie poświęconej hodowli rasowych świnek morskich.</b>", "photo": "", "creation_date": "2024-01-30T02:23:43.099Z"}}
 ]
