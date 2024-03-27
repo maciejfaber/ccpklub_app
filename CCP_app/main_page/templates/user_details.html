@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Detale użytkownika: {{ waiting_user.username }}</h2>
+    <p>Data dołączenia: {{ waiting_user.date_joined }}</p>
+    <p>Numer telefonu: {{ waiting_user.phone_number }}</p>
+    <p>Miejscowość: {{ waiting_user.town }}</p>
+    <p>Kod pocztowy: {{ waiting_user.postal_code }}</p>
+    <p>Numer rejestracyjny: {{ waiting_user.registration_number }}</p>
+    <p>Rola: {{ waiting_user.get_role_display }}</p>
+    <p>Ankieta: {{ waiting_user.questionnaire }}</p>
+    <form method="post" action="{% url 'user_details' waiting_user.id %}">
+    {% csrf_token %}
+    <button type="submit" name="action" value="accept">Zaakceptuj</button>
+    <button type="submit" name="action" value="delete">Usuń</button>
+       <br><p> Dodatkowa wiadomość dla użytkownika:</p>
+        <p>{{ form.email_content }}</p>
+</form>
+{% endblock %}
