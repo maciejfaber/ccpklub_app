@@ -27,12 +27,13 @@ from .forms import (
     ExistingPigForm,
     BreedingForm,
     UserActionForm,
+    BreedingActionForm,
 )
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.views import View
-from django.views.generic import ListView, DetailView, FormView, CreateView
+from django.views.generic import ListView, DetailView, FormView, CreateView, UpdateView
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -49,7 +50,7 @@ def not_login_required(view_func):
 
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
-    template_name = "user_detail.html"
+    template_name = "my_profile.html"
 
     def get_object(self, queryset=None):
         return self.request.user
@@ -122,6 +123,13 @@ class CustomLoginView(LoginView):
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
+    def form_invalid(self, form):
+        # Dodaj komunikat do kontekstu sesji
+        messages.error(
+            self.request, "Nieprawidłowa nazwa użytkownika lub hasło. Spróbuj ponownie."
+        )
+        return super().form_invalid(form)
+
 
 @login_required
 def logout_view(request):
@@ -141,36 +149,27 @@ class InactiveUserListView(LoginRequiredMixin, ListView):
     context_object_name = "inactive_users"
 
 
-class UserDetailsView(LoginRequiredMixin, DetailView, FormView):
-
-    model = User
+class UserDetailsView(LoginRequiredMixin, FormView):
     template_name = "user_details.html"
-    context_object_name = "user"
     form_class = UserActionForm
+    success_url = reverse_lazy("inactive_user_list")
 
-    def get_object(self, queryset=None):
-        user_id = self.kwargs.get("user_id")
-        return get_object_or_404(User, id=user_id)
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        form = self.get_form()
-        return self.render_to_response(
-            self.get_context_data(object=self.object, form=form)
-        )
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_id = self.kwargs["user_id"]
+        context["waiting_user"] = get_object_or_404(User, id=user_id)
+        return context
 
     def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
         form = self.get_form()
-        print(form)
-        print(self.form_valid(form))
         if form.is_valid():
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
 
     def form_valid(self, form):
-        user = self.get_object()
+        user_id = self.kwargs["user_id"]
+        user = get_object_or_404(User, id=user_id)
         action = form.cleaned_data["action"]
         email_content = form.cleaned_data["email_content"]
         subject = ""
@@ -179,7 +178,7 @@ class UserDetailsView(LoginRequiredMixin, DetailView, FormView):
             user.is_active = True
             user.registration_number = self.generate_registration_number()
             user.save()
-            subject = "Twój konto został zaakceptowany"
+            subject = "Twój konto został zaakceptowane"
             message = (
                 f"Twoje konto na stronie zostało zaakceptowane. Twój login to: "
                 f'"{user.username}" Możesz się teraz zalogować używając hasła podanego podczas rejestracji.\n'
@@ -187,8 +186,11 @@ class UserDetailsView(LoginRequiredMixin, DetailView, FormView):
             )
         elif action == "delete":
             user.delete()
-            subject = "Twój konto został usunięte"
-            message = f"Twoje konto na stronie zostało usunięte.\n" f"{email_content}"
+            subject = "Prośba o założenie konta została odrzucona"
+            message = (
+                f"Twoje prośba o założenie konta została odrzucona.\n"
+                f"Uzasadnienie: {email_content}"
+            )
 
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [user.email]
@@ -324,22 +326,24 @@ class ExhibitorMyPigsView(LoginRequiredMixin, SingleObjectMixin, View):
     context_object_name = "user_pigs"
 
     def get(self, request, *args, **kwargs):
-        user_pigs = Pig.objects.filter(owner=self.request.user, is_active=True)
+        user_pigs = Pig.objects.filter(owner=self.request.user, is_accepted=True)
         return render(
             request, self.template_name, {self.context_object_name: user_pigs}
         )
 
     def post(self, request, *args, **kwargs):
         delete_pig_id = request.POST.get("delete_pig_id")
+        print(delete_pig_id)
+        print(self.request.user)
         if delete_pig_id:
             pig_to_delete = get_object_or_404(
                 Pig, id=delete_pig_id, owner=self.request.user
             )
-            pig_to_delete.is_active = False
+            pig_to_delete.is_accepted = False
             pig_to_delete.save()
-            messages.success(request, "Świnia została usunięta.")
+            messages.success(request, "Świnka została usunięta.")
         else:
-            messages.error(request, "Nie udało się usunąć świnii.")
+            messages.error(request, "Nie udało się usunąć świnki.")
 
         return redirect(reverse_lazy("exhibitor_my_pigs"))
 
@@ -356,7 +360,7 @@ class ExhibitorPigDetailView(LoginRequiredMixin, View):
         delete_pig_id = request.POST.get("delete_pig_id", None)
 
         if delete_pig_id is not None:
-            pig.is_active = False
+            pig.is_accepted = False
             pig.save()
             return redirect("exhibitor_my_pigs")
 
@@ -413,15 +417,22 @@ def get_pig_info(request):
                 "colors": selected_pig.colors,
                 "sex": selected_pig.sex,
                 "breeder": selected_pig.breeder,
-                "birth_date": selected_pig.birth_date
-                if selected_pig.birth_date is not None
-                else None,
-                "birth_weight": selected_pig.birth_weight
-                if selected_pig.birth_weight is not None
-                else None,
-                "eye_color": selected_pig.eye_color.name
-                if selected_pig.eye_color and selected_pig.eye_color.name is not None
-                else None,
+                "birth_date": (
+                    selected_pig.birth_date
+                    if selected_pig.birth_date is not None
+                    else None
+                ),
+                "birth_weight": (
+                    selected_pig.birth_weight
+                    if selected_pig.birth_weight is not None
+                    else None
+                ),
+                "eye_color": (
+                    selected_pig.eye_color.name
+                    if selected_pig.eye_color
+                    and selected_pig.eye_color.name is not None
+                    else None
+                ),
             }
             if selected_pig.mother and selected_pig.father:
                 pig_info["mother_name"] = selected_pig.mother.name
@@ -843,21 +854,118 @@ class delete_waiting_pig(View):
             return JsonResponse({"status": "error", "error_message": str(e)})
 
 
-class add_breeding(View):
-    message_sent = False
+class AddBreedingView(LoginRequiredMixin, FormView):
+    template_name = "add_breeding.html"
+    form_class = BreedingForm
 
-    def get(self, request):
-        form = BreedingForm(request=request)
-        return render(request, "add_breeding.html", {"form": form})
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["user"] = self.request.user
+        return initial
 
-    def post(self, request, message_sent=None):
-        form = BreedingForm(request.POST, request=request)
-        if form.is_valid():
-            form.save()
-            message_sent = True
-        return render(
-            request, "add_breeding.html", {"form": form, "message_sent": message_sent}
+    def get_context_data(self, **kwargs):
+        context = super(AddBreedingView, self).get_context_data(**kwargs)
+        context["users_set"] = User.objects.filter(role__in=("HP", "HZ")).exclude(
+            id=self.request.user.id
         )
+        return context
+
+    def form_valid(self, form):
+        form.save()
+        context = self.get_context_data()
+        context["message_sent"] = True
+        return self.render_to_response(context)
+
+
+class InactiveBreedingListView(LoginRequiredMixin, ListView):
+    model = Breeding
+    template_name = "inactive_breeding_list.html"
+    context_object_name = "breedings"
+    queryset = Breeding.objects.filter(status="waiting", is_active=False)
+
+
+# class InactiveBreedingDetailsView(DetailView):
+#     model = Breeding
+#     template_name = "inactive_breeding_details.html"
+#     context_object_name = "breeding"
+
+# def get_context_data(self, **kwargs):
+#     context = super().get_context_data(**kwargs)
+#     breeding_id = self.kwargs["breeding_id"]
+#     context["breeding_id"] = get_object_or_404(Breeding, id=breeding_id)
+#     return context
+
+
+class InactiveBreedingDetailsView(LoginRequiredMixin, FormView):
+    template_name = "inactive_breeding_details.html"
+    form_class = BreedingActionForm
+    success_url = reverse_lazy("inactive_breeding_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        breeding_id = self.kwargs["breeding_id"]
+        context["breeding"] = get_object_or_404(Breeding, id=breeding_id)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        breeding_id = self.kwargs["breeding_id"]
+        breeding = get_object_or_404(Breeding, id=breeding_id)
+        action = form.cleaned_data["action"]
+        subject = ""
+        message = ""
+        recipient_list = [owner.email for owner in breeding.owners.all()]
+        if action == "accept":
+            breeding.is_active = True
+            breeding.status = "active"
+            breeding.registration_number = self.generate_registration_number()
+            breeding.save()
+            subject = f"Akceptacja hodowli - {breeding.name}"
+            message = (
+                f"Twój wniosek o założenie hodowli {breeding.name} został zaakceptowany."
+                f" Hodowla została zarejestrowana pod numerem: {breeding.registration_number}\n"
+                f" Możesz teraz rejestrować świnki oraz zapisywać się na wystawy. Gratulacje!\n"
+            )
+        elif action == "delete":
+            subject = f"Odmowa założenia hodowli - {breeding.name}"
+            message = f"Twoje prośba o założenie hodowli została odrzucona.\n"
+            breeding.delete()
+
+        from_email = settings.DEFAULT_FROM_EMAIL
+        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        return HttpResponseRedirect(reverse_lazy("inactive_breeding_list"))
+
+    @staticmethod
+    def generate_registration_number():
+        current_year = date.today().year
+        last_breeding = (
+            Breeding.objects.filter(
+                registration_number__startswith=f"CCP/{current_year}/"
+            )
+            .order_by("-registration_number")
+            .first()
+        )
+        if last_breeding:
+            last_number = int(last_breeding.registration_number.split("/")[-1])
+            new_number = str(last_number + 1).zfill(3)
+        else:
+            new_number = "001"
+        return f"CCP/{current_year}/{new_number}"
+
+
+class BreedingDetailView(LoginRequiredMixin, DetailView):
+    model = Breeding
+    template_name = "breeding_info.html"
+
+    def get_object(self, queryset=None):
+        breeding = Breeding.objects.filter(owners=self.request.user).first()
+        return breeding
 
 
 class BreederMyPigsView(LoginRequiredMixin, ListView):
@@ -865,8 +973,14 @@ class BreederMyPigsView(LoginRequiredMixin, ListView):
     template_name = "breeder_my_pigs.html"
     context_object_name = "user_pigs"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        breeding = Breeding.objects.filter(owners=self.request.user).first()
+        context["breeding"] = breeding
+        return context
+
     def get_queryset(self):
-        return Pig.objects.filter(owner=self.request.user, is_active=True)
+        return Pig.objects.filter(owner=self.request.user, is_in_breeding=True)
 
 
 class BreederPigDetailView(LoginRequiredMixin, DetailView):
@@ -878,7 +992,20 @@ class BreederPigDetailView(LoginRequiredMixin, DetailView):
         delete_pig_id = request.POST.get("delete_pig_id", None)
         if delete_pig_id is not None:
             pig = self.get_object()
-            pig.is_active = False
-            pig.dave()
+            pig.is_accepted = False
+            pig.save()
             return redirect("breeder_my_pigs")
         return super().get(request, *args, **kwargs)
+
+
+class BreederPigPedigreeView(DetailView):
+    model = Pig
+    template_name = "breeder_pig_pedigree.html"
+    context_object_name = "pig"
+
+
+class BreederPigUpdateView(UpdateView):
+    model = Pig
+    fields = ["photo"]
+    template_name = "breeder_pig_update.html"
+    success_url = reverse_lazy("breeder_my_pigs")

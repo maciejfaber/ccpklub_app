@@ -25,6 +25,8 @@
                 <input type="hidden" name="delete_pig_id" value="{{ pig.id }}">
                 <button type="submit" class="btn btn-danger">Usuń</button>
                 <button type="button" class="btn btn-primary" onclick="window.location.href='{% url 'breeder_my_pigs' %}'">Powrót do listy</button>
+                <a href="{% url 'breeder_pig_pedigree' pig.id %}" class="btn btn-primary me-2">Rodowód</a>
+                <a href="{% url 'breeder_pig_update' pig.id %}" class="btn btn-primary me-2">Edycja</a>
             </form>
         </div>
 

@@ -14,7 +14,7 @@
   <form method="post" class="row g-3">
     {% csrf_token %}
     <div class="form-floating col-md-6">
-      <input type="text" placeholder="Tak" class="form-control {% if form.errors.first_name %}is-invalid{% endif %}" id="inputFirstName" name="first_name" value="{{ form.data.first_name }}" required>
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.first_name %}is-invalid{% endif %}" id="inputFirstName" name="first_name" value="{{ form.data.first_name }}" autocomplete="given-name" required>
       <label for="inputFirstName" class="form-label">Imię</label>
       {% if form.errors.first_name %}
       <div class="alert alert-danger">
@@ -25,7 +25,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-6">
-      <input type="text" placeholder="Nazwisko" class="form-control {% if form.errors.last_name %}is-invalid{% endif %}" id="inputLastName" name="last_name" value="{{ form.data.last_name }}" required>
+      <input type="text" placeholder="Nazwisko" class="form-control {% if form.errors.last_name %}is-invalid{% endif %}" id="inputLastName" name="last_name" value="{{ form.data.last_name }}" autocomplete="family-name" required>
       <label for="inputLastName" class="form-label">Nazwisko</label>
       {% if form.errors.last_name %}
       <div class="alert alert-danger">
@@ -36,7 +36,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-6">
-      <input type="email" placeholder="Adres email" class="form-control {% if form.errors.email %}is-invalid{% endif %}" id="inputEmail" name="email" value="{{ form.data.email }}" required>
+      <input type="email" placeholder="Adres email" class="form-control {% if form.errors.email %}is-invalid{% endif %}" id="inputEmail" name="email" value="{{ form.data.email }}" autocomplete="email" required>
       <label for="inputEmail" class="form-label">Adres email</label>
       {% if form.errors.email %}
       <div class="alert alert-danger">
@@ -125,7 +125,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-4">
-      <input type="text" placeholder="Kod pocztowy" class="form-control {% if form.errors.postal_code %}is-invalid{% endif %}" id="inputPostalCode" name="postal_code" value="{{ form.data.postal_code }}" >
+      <input type="text" placeholder="Kod pocztowy" class="form-control {% if form.errors.postal_code %}is-invalid{% endif %}" id="inputPostalCode" name="postal_code" value="{{ form.data.postal_code }}" autocomplete="off" >
       <label for="inputPostalCode" class="form-label">Kod pocztowy</label>
       {% if form.errors.postal_code %}
       <div class="alert alert-danger">
@@ -136,7 +136,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-6">
-      <input type="password" placeholder="Hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="inputPassword" name="password1" required>
+      <input type="password" placeholder="Hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="inputPassword" name="password1" autocomplete="new-password" required>
       <label for="inputPassword" class="form-label">Hasło</label>
       {% if form.errors.password2 %}
       <div class="alert alert-danger">
@@ -147,7 +147,7 @@
       {% endif %}
     </div>
     <div class="form-floating col-md-6">
-      <input type="password" placeholder="Potwierdź hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="confirmPassword" name="password2" required>
+      <input type="password" placeholder="Potwierdź hasło" class="form-control {% if form.errors.password2 %}is-invalid{% endif %}" id="confirmPassword" name="password2" autocomplete="new-password" required>
       <label for="confirmPassword" class="form-label">Potwierdź hasło</label>
     </div>
     <div class="col-12 mb-5 mt-5 text-center">

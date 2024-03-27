@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Wybierz rodzaj rejestracji:</h2>
 
-  <form method="post" action="{% url 'register' %}">
-    {% csrf_token %}
-    <button type="submit" name="registration_type" value="member">Zarejestruj się jako Hodowca lub Miłośnik</button><br>
-    <button type="submit" name="registration_type" value="exhibitor">Zarejestruj się jako Wystawca</button><br>
-  </form>
+<div class="row justify-content-center m-4">
+  <h2 class="text-center">Wybierz rodzaj rejestracji:</h2>
+    <div class="col-md-6">
+      <form method="post" action="{% url 'register' %}" class="text-center">
+        {% csrf_token %}
+        <button class="btn btn-primary" name="registration_type" type="submit" value="member">Hodowca lub Miłośnik</button>
+        <button class="btn btn-primary" name="registration_type" type="submit" value="exhibitor">Hodowca zagraniczny lub Wystawca</button>
+      </form>
+    </div>
+  </div>
+
 {% endblock %}

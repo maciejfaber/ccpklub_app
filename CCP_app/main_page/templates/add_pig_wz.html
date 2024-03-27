@@ -76,8 +76,8 @@
       {% endif %}
     </div>
       <div class="form-floating col-md-6">
-      <input type="text" placeholder="Tak" class="form-control {% if form.errors.name %}is-invalid{% endif %}" id="inputRegistration_number" name="registration_number" value="{{ form.data.registration_number }}">
-      <label for="inputRegistration_number" class="form-label">Numer rejestracyjny (Tylko świnki zarejestrowane w CCP)</label>
+      <input type="text" placeholder="Tak" class="form-control {% if form.errors.registration_number %}is-invalid{% endif %}" id="inputRegistration_number" name="registration_number" value="{{ form.data.registration_number }}">
+      <label for="inputRegistration_number" class="form-label">Numer rejestracyjny (lub nazwa klubu)</label>
       {% if form.errors.registration_number %}
         <div class="alert alert-danger">
           {% for error in form.errors.registration_number %}

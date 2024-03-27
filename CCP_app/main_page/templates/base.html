@@ -90,6 +90,21 @@
 								<li class="nav-item">
 									<a class="nav-link" href="{% url 'contact' %}">Kontakt</a>
 								</li>
+								{% if user.is_authenticated and user.is_staff %}
+									<li class="nav-item dropdown">
+										<a class="nav-link dropdown-toggle text-danger" href="#" id="adminpanelDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+											Admin Panel
+										</a>
+										<ul class="dropdown-menu" aria-labelledby="lawDropdown">
+											<li><a class="dropdown-item" href="{% url 'admin:index' %}">Panel Administratora</a></li>
+											<li><a class="dropdown-item" href="{% url 'add_news' %}">Dodaj Aktualności</a></li>
+											<li><a class="dropdown-item" href="{% url 'inactive_user_list' %}">Akceptacja użytkowników</a></li>
+											<li><a class="dropdown-item" href="{% url 'inactive_breeding_list' %}">Rejestracja hodowli</a></li>
+											<li><a class="dropdown-item" href="{% url 'waiting_pig_list' %}">Rejestracja świnek</a></li>
+											<li><a class="dropdown-item" href="{% url 'message_list' %}">Wiadomości</a></li>
+										</ul>
+									</li>
+								{% endif %}
 							</ul>
 							<ul class="navbar-nav ms-auto">
 								{% if user.is_authenticated %}
@@ -98,12 +113,12 @@
 										{{ user.first_name }} {{ user.last_name }}
 									</a>
 									<ul class="dropdown-menu" aria-labelledby="userDropdown">
-										<li><a class="dropdown-item" href="{% url 'my_profile' %}">Moje dane</a></li>
+										<li><a class="dropdown-item" href="{% url 'my_profile' %}">Profil</a></li>
 										{% if user.role == 'WD' or user.role == 'WZ' %}
-											<li><a class="dropdown-item" href="{% url 'exhibitor_my_pigs' %}">Moje Świnki</a></li>
+											<li><a class="dropdown-item" href="{% url 'exhibitor_my_pigs' %}">Świnki</a></li>
 										{% else %}
-											<li><a class="dropdown-item" href="{% url 'breeder_my_pigs' %}">Moje Świnki</a></li>
-											<li><a class="dropdown-item" href="{% url 'breeder_add_pig' %}">Moja hodowla</a></li>
+											<li><a class="dropdown-item" href="{% url 'breeder_my_pigs' %}">Świnki</a></li>
+											<li><a class="dropdown-item" href="{% url 'breeding_details' %}">Hodowla</a></li>
 										{% endif %}
 										<li><a class="dropdown-item" href="{% url 'logout' %}">Wyloguj się</a></li>
 									</ul>
