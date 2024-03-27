@@ -129,6 +129,7 @@ class EyeColor(models.Model):
     polish_name = models.CharField(
         max_length=150, unique=False, blank=False, null=False
     )
+    short = models.CharField(max_length=20, blank=False, null=False)
 
     def __str__(self):
         return self.name
@@ -146,8 +147,8 @@ class Breeding(models.Model):
         ("kicked", "Usunięta dyscyplinarnie"),
     ]
     name = models.CharField(max_length=100, unique=True, null=False, blank=False)
-    nickname = models.CharField(max_length=100, null=False, blank=False)
-    owners = models.ManyToManyField("User", blank=False, related_name="BREEDING_owners")
+    nickname = models.CharField(max_length=100, null=False, blank=False, unique=True)
+    owners = models.ManyToManyField("User", blank=True, related_name="BREEDING_owners")
     breeds = models.ManyToManyField(
         "Breed", blank=False, related_name="BREEDING_breeds"
     )
@@ -227,14 +228,15 @@ class Pig(models.Model):
         default=None,
         related_name="PIG_litter",
     )
-    photo = models.ImageField(
-        upload_to="zdjecia_swinek/zdjecia_uzytkownikow", null=True, blank=True
-    )
+    photo = models.ImageField(upload_to="pig_photos", null=True, blank=True)
     nickname_position = models.CharField(
         max_length=6, choices=POSITION_CHOICES, default="After", blank=True, null=True
     )
     is_in_breeding = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=False)
+    is_accepted = models.BooleanField(default=False)
+    litter_count = models.PositiveIntegerField(default=0)
+    for_breeding = models.BooleanField(default=True)
+    for_exhibitions = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name + " " + self.nickname

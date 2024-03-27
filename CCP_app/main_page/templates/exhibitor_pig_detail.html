@@ -6,7 +6,7 @@
         <h1>Szczegóły Świnki</h1>
 
         <div >
-            <strong>{{ pig.name }}  {% if user.username != pig.nickname %}}{{pig.nickname}}{% endif %}</strong><br>
+            <strong>{{ pig.name }}  {% if user.username != pig.nickname %}{{pig.nickname}}{% endif %}</strong><br>
             {% if pig.sex == "Male" %}
                 Płeć: Samiec<br>
             {% else %}
@@ -17,7 +17,7 @@
             {% if pig.birth_weight != None %}Waga przy urodzeniu: {{ pig.birth_weight }}<br>{% endif %}
             {% if pig.birth_weight != None %}Umaszczenie: {{ pig.formatted_colors }}<br>{% endif %}
             {% if pig.eye_color != None %}Kolor oczu: {{ pig.eye_color }}<br>{% endif %}
-            {% if pig.registration_number != None %}Numer rejestracyjny CCP: {{ pig.registration_number }}<br>{% endif %}
+            {% if pig.registration_number != "" %}Numer rejestracyjny CCP: {{ pig.registration_number }}<br>{% endif %}
 
 
             <form method="post" action="{% url 'exhibitor_pig_detail' pig.id %}" class="mt-3 mb-3">

@@ -337,6 +337,16 @@ class UserActionForm(forms.Form):
     email_content = forms.CharField(widget=forms.Textarea, required=False)
 
 
+class BreedingActionForm(forms.Form):
+    ACTION_CHOICES = [
+        ("accept", "Akceptuj"),
+        ("delete", "Usuń"),
+    ]
+
+    action = forms.ChoiceField(choices=ACTION_CHOICES)
+    comments = forms.CharField(widget=forms.Textarea, required=False)
+
+
 class ReplyForm(forms.Form):
     title = forms.CharField(max_length=255, required=True)
     content = forms.CharField(widget=forms.Textarea, required=True)
@@ -353,36 +363,29 @@ class PigWDForm(forms.ModelForm):
         widget=forms.SelectDateWidget(years=year_range),
         required=False,
     )
-    nickname = forms.CharField(max_length=255, label="Przydomek", required=False)
+    colors = forms.CharField(
+        max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False
+    )
 
     class Meta:
         model = Pig
-        fields = ["name", "sex", "birth_date", "colors"]
+        fields = ["name", "sex", "birth_date", "colors", "owner"]
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.owner = kwargs.pop("owner", None)
-        self.fields["colors"] = forms.CharField(
-            max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False
-        )
-
-    def save(self, commit=True):
-        pig = super().save(commit=False)
-        pig.breed = Breed.objects.get(name="PET (świnka domowa – pupil)")
-        pig.is_active = True
-        pig.nickname = self.owner.username
-        if commit:
-            pig.save()
-            pig.owner.set([self.owner])
-            pig.save()
-        return pig
+        super().__init__(*args, **kwargs)
+        if self.owner:
+            self.fields["owner"].initial = self.owner
 
     def clean(self):
-        name = self.cleaned_data.get("name")
-        nickname = self.owner.username
-        if Pig.objects.filter(name=name, nickname=nickname).exists():
+        if Pig.objects.filter(
+            name=self.cleaned_data.get("name"), owner=self.owner
+        ).exists():
             self.add_error(
-                "name", forms.ValidationError("Już posiadasz świnkę o takim imieniu")
+                "name",
+                forms.ValidationError(
+                    "Świnka o takim imieniu została już przez Ciebie dodana"
+                ),
             )
         else:
             return self.cleaned_data
@@ -390,7 +393,6 @@ class PigWDForm(forms.ModelForm):
     def clean_colors(self):
         cleaned_data = super().clean()
         pig_color_value = cleaned_data.get("colors", None)
-        print(pig_color_value)
         if pig_color_value.startswith("['', 'Sable'"):
             raise forms.ValidationError(
                 'Aby wybrać "Sable" wybierz kolor z rodziny czerni'
@@ -399,6 +401,17 @@ class PigWDForm(forms.ModelForm):
             raise forms.ValidationError("Wybierz przynajmniej jeden kolor.")
 
         return pig_color_value
+
+    def save(self, commit=True):
+        pig = super().save(commit=False)
+        pig.breed = Breed.objects.get(name="PET (świnka domowa – pupil)")
+        pig.is_accepted = True
+        pig.nickname = self.owner.username
+        if commit:
+            pig.save()
+            pig.owner.set([self.owner])
+            pig.save()
+        return pig
 
 
 class PigWZForm(forms.ModelForm):
@@ -434,15 +447,17 @@ class PigWZForm(forms.ModelForm):
         ]
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.owner = kwargs.pop("owner", None)
+        super().__init__(*args, **kwargs)
+        if self.owner:
+            self.fields["owner"].initial = self.owner
         self.fields["colors"] = forms.CharField(
             max_length=255, widget=PigColorWidget, label="Umaszczenie", required=False
         )
 
     def save(self, commit=True):
         pig = super().save(commit=False)
-        pig.is_active = True
+        pig.is_accepted = True
         if commit:
             pig.save()
             pig.owner.set([self.owner])
@@ -603,31 +618,32 @@ class ExhibitorAddPigForm(forms.ModelForm):
 class BreedingForm(forms.ModelForm):
     name = forms.CharField(max_length=150, label="name", required=True)
     nickname = forms.CharField(max_length=150, label="nickname", required=True)
-    owners = forms.ModelChoiceField(
-        queryset=User.objects.all(), required=True, label="owners"
-    )
     breeds = forms.ModelMultipleChoiceField(
         queryset=Breed.objects.all(), required=True, label="breeds"
     )
     purpose = forms.CharField(widget=forms.Textarea, required=True)
-
-    def save(self, commit=True):
-        Breeding = super().save(commit=False)
-        if commit:
-            Breeding.save()
-            Breeding.owners.add(self.data["owners"])
-            Breeding.owners.add(self.request.user)
-            Breeding.breeds.add(*self.clean_breeds())
-            Breeding.contact_breeder.add(self.request.user)
-        return Breeding
+    second_owner = forms.CharField(max_length=150, required=False)
 
     class Meta:
         model = Breeding
         fields = ["name", "nickname", "owners", "breeds", "name_position", "purpose"]
 
     def __init__(self, *args, **kwargs):
-        self.request = kwargs.pop("request", None)
         super(BreedingForm, self).__init__(*args, **kwargs)
+        self.user = kwargs.get("initial").get("user")
+        users_set = User.objects.filter(role__in=("HP", "HZ")).exclude(id=self.user.id)
+
+    def save(self, commit=True):
+        Breeding = super().save(commit=False)
+        if commit:
+            Breeding.save()
+            if self.data["second_owner"]:
+                second_owner = User.objects.get(username=self.data["second_owner"])
+                Breeding.owners.add(second_owner)
+            Breeding.owners.add(self.user)
+            Breeding.breeds.add(*self.clean_breeds())
+            Breeding.contact_breeder.add(self.user)
+        return Breeding
 
     def clean_name(self):
         name = self.cleaned_data.get("name")

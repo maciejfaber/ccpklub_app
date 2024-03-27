@@ -5,14 +5,16 @@
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
         <div class="form-floating mb-4 mt-5">
-            <input type="text" id="UsernameForm" name="username" placeholder="Nazwa użytkownika" class="form-control {% if messages %}is-invalid{% endif %}" />
+            <input type="text" id="UsernameForm" name="username" placeholder="Nazwa użytkownika"
+                   class="form-control {% if messages %}is-invalid{% endif %}" autocomplete="username" />
             <label class="form-label" for="UsernameForm">Nazwa użytkownika</label>
         </div>
         <div class="form-floating mb-3">
-            <input type="password" id="PasswordForm" name="password" placeholder="Hasło" class="form-control {% if messages %}is-invalid{% endif %}" />
+            <input type="password" id="PasswordForm" name="password" placeholder="Hasło"
+                   class="form-control {% if messages %}is-invalid{% endif %}" autocomplete="current-password" />
             <label class="form-label" for="PasswordForm">Hasło</label>
         </div>
-        </div>
+  </div>
     <div class="d-flex justify-content-center">
         {% if messages %}
             {% for message in messages %}

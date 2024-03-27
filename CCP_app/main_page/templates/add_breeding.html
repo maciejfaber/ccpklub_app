@@ -1,19 +1,144 @@
 {% extends "base.html" %}
-
 {% block content %}
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+<script>
+   $(document).ready(function () {
+        var availableUsers = [
+           {% for user in users_set %}
+               {
+                   label: "{{ user.first_name }} {{ user.last_name }}",  // Wyświetlana reprezentacja użytkownika
+                   value: "{{ user }}"  // Wartość, którą chcesz przekazać
+               },
+           {% endfor %}
+       ];
+
+       $( "#id_owners" ).autocomplete({
+           source: availableUsers,
+           select: function (event, ui) {
+               // Wartość wybrana z autocomplete
+               var selectedValue = ui.item.value;
+               console.log(selectedValue);
+               $("#id_owners option:contains(" + ui.item.value + ")").prop("selected", true);
+           }
+       });
+   $("#btnLeft").click(function () {
+    var selectedItem = $("#rightValues option:selected");
+    $("#leftValues").append(selectedItem);
+   });
+
+   $("#btnRight").click(function () {
+       var selectedItem = $("#leftValues option:selected");
+       $("#rightValues").append(selectedItem);
+   });
+
+   $("#rightValues").change(function () {
+       var selectedItem = $("#rightValues option:selected");
+       $("#txtRight").val(selectedItem.text());
+   });
+   });
+
+</script>
 {% if message_sent %}
-  <div class="d-flex flex-column align-items-center my-5">
-    <h1>Dziękujemy!</h1>
-    <p class="text-center">Po potwierdzeniu zarejestrowania hodowli przez zarząd
-      hodowla zostanie aktywowana. <br>Informacja zostanie wysłane na adres: <b>{{ user.email }}</b></p>
-    <a href="{% url 'Main' %}" class="btn btn-success mt-3">Przejdź do strony głównej</a>
+<div class="d-flex flex-column align-items-center my-5">
+   <h1>Dziękujemy!</h1>
+   <p class="text-center">Po potwierdzeniu zarejestrowania hodowli przez zarząd
+      hodowla zostanie aktywowana. <br>Informacja zostanie wysłane na adres: <b>{{ user.email }}</b>
+   </p>
+   <a href="{% url 'Main' %}" class="btn btn-success mt-3">Przejdź do strony głównej</a>
 </div>
 {% else %}
-<h2>Create Breeding</h2>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Create</button>
-    </form>
+   <div class="row text-center m-3">
+            <h2>Rejestracja hodowli</h2>
+        </div>
+<form method="post" enctype="multipart/form-data">
+   {% csrf_token %}
+   <div class="row">
+      <div class="form-floating col-md-6">
+         <input type="text" placeholder="Nazwa hodowli" class="form-control {% if form.errors.name %}is-invalid{% endif %}" id="inputName" name="name" value="{{ form.data.name }}" required>
+         <label for="inputName" class="form-label">Nazwa hodowli</label>
+         {% if form.errors.name %}
+         <div class="alert alert-danger my-1">
+            {% for error in form.errors.name %}
+            {{ error }}
+            {% endfor %}
+         </div>
+         {% endif %}
+      </div>
+      <div class="form-floating col-md-6">
+         <input type="text" placeholder="Przydomek hodowlany" class="form-control {% if form.errors.nickname %}is-invalid{% endif %}" id="inputNickname" name="nickname" value="{{ form.data.nickname }}" required>
+         <label for="inputNickname" class="form-label">Przydomek hodowlany</label>
+         {% if form.errors.nickname %}
+         <div class="alert alert-danger my-1">
+            {% for error in form.errors.nickname %}
+            {{ error }}
+            {% endfor %}
+         </div>
+         {% endif %}
+      </div>
+   </div>
+   <div class="row my-2">
+      <div class="col-md-6">
+         <select class="form-select {% if form.errors.name_position %}is-invalid{% endif %}" id="inputName_position" name="name_position" value="{{ form.data.name_position }}" required>
+            <option value="" selected disabled>Wybierz miejsce wyświetlania przydomka</option>
+            {% for value, label in form.name_position.field.choices %}
+            <option value="{{ value }}" {% if value == form.role.value %}selected{% endif %}>
+            {% if value == 'after' %}Po{% else %}Przed{% endif %}
+            </option>
+            {% endfor %}
+         </select>
+         {% if form.errors.role %}
+         <div class="alert alert-danger my-1">
+            {% for error in form.errors.role %}
+            {{ error }}
+            {% endfor %}
+         </div>
+         {% endif %}
+      </div>
+       <div class="col-md-6">
+           <div class="ui-widget input-group">
+             <span class="input-group-text">Dodatkowy hodowca:</span>
+             <input id="id_owners" name="second_owner">
+          </div>
+       </div>
+   </div>
+   <section class="row">
+       <div class="col-md-3">
+           <select id="rightValues" size="7" multiple>
+               <option value="" selected disabled>Wybierz rasy które chcesz hodować</option>
+               {% for value, label in form.breeds.field.choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+           </select>
+
+       </div>
+       <div class="col-md-1">
+          <input type="button" id="btnRight" value="&lt;&lt;" />
+           <input type="button" id="btnLeft" value="&gt;&gt;" />
+
+       </div>
+      <div class="col-md-3">
+           <select id="leftValues" name="breeds" size="7" multiple>
+              <option value="" selected disabled>Tutaj pojawią się wybrane rasy</option>
+           </select>
+       </div>
+      <div class="col-md-5">
+      <textarea class="form-control {% if form.errors.purpose %}is-invalid{% endif %}"
+                placeholder="Napisz nam dlaczego chcesz założyć hodowlę i jaki jest twój plan hodowlany"
+                id="inputPurpose" name="purpose" rows="6">{{ form.data.purpose }}</textarea>
+      {% if form.errors.purpose %}
+      <div class="alert alert-danger">
+        {% for error in form.errors.purpose %}
+            {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+   </section>
+
+   <button type="submit">Create</button>
+</form>
+{{ form.errors }}
 {% endif %}
 {% endblock %}

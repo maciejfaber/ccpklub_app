@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Wniosek o rejestrację hodowli {{ breeding.name }}</h2>
+<p>{{ breeding.nickname }} </p>
+<p>{{ breeding.owners.all }}</p>
+<p>{{ breeding.breeds.all }}</p>
+<p>{{ breeding.contact_breeder.all }}</p>
+<p>{{ breeding.name_position }}</p>
+<p>{{ breeding.purpose }}</p>
+
+<!-- Wyświetl inne informacje o hodowli -->
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" name="action" value="accept">Zaakceptuj hodowlę</button>
+  <button type="submit" name="action" value="delete">Usuń wniosek</button>
+</form>
+
+{% endblock %}

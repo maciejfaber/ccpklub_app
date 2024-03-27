@@ -85,15 +85,10 @@
   {"model": "main_page.color", "pk": 88, "fields": {"name": "Beige Lux", "position": "1"}},
   {"model": "main_page.color", "pk": 89, "fields": {"name": "Blue Lux", "position": "1"}},
   {"model": "main_page.color", "pk": 90, "fields": {"name": "Red", "position": "2"}},
-  {"model": "main_page.color", "pk": 91, "fields": {"name": "Golden D.E.", "position": "2"}},
-  {"model": "main_page.color", "pk": 92, "fields": {"name": "Golden R.E.", "position": "2"}},
-  {"model": "main_page.color", "pk": 93, "fields": {"name": "Golden P.E.", "position": "2"}},
+  {"model": "main_page.color", "pk": 91, "fields": {"name": "Golden", "position": "2"}},
   {"model": "main_page.color", "pk": 94, "fields": {"name": "Buff", "position": "2"}},
   {"model": "main_page.color", "pk": 95, "fields": {"name": "Saffron", "position": "2"}},
-  {"model": "main_page.color", "pk": 96, "fields": {"name": "Cream D.E.", "position": "2"}},
-  {"model": "main_page.color", "pk": 97, "fields": {"name": "Cream P.E.", "position": "2"}},
-  {"model": "main_page.color", "pk": 98, "fields": {"name": "White D.E.", "position": "2"}},
-  {"model": "main_page.color", "pk": 99, "fields": {"name": "White P.E.", "position": "2"}},
+  {"model": "main_page.color", "pk": 96, "fields": {"name": "Cream", "position": "2"}},
   {"model": "main_page.color", "pk": 100, "fields": {"name": "Roan", "position": "4"}},
   {"model": "main_page.color", "pk": 101, "fields": {"name": "Dalmation", "position": "4"}},
   {"model": "main_page.color", "pk": 102, "fields": {"name": "Black Californian", "position": "4"}},
@@ -103,6 +98,9 @@
   {"model": "main_page.color", "pk": 106, "fields": {"name": "Lilac Californian", "position": "4"}},
   {"model": "main_page.color", "pk": 107, "fields": {"name": "Beige Californian", "position": "4"}},
   {"model": "main_page.color", "pk": 108, "fields": {"name": "Blue Californian", "position": "4"}},
+  {"model": "main_page.color", "pk": 109, "fields": {"name": "White", "position": "3"}},
+
+
 
   {"model": "main_page.breed", "pk": 1, "fields": {"name": "Self Czarny", "polish_name": "Self Czarny", "standard": "A"}},
   {"model": "main_page.breed", "pk": 2, "fields": {"name": "Self Slate Blue", "polish_name": "Self Slate Blue", "standard": "A"}},

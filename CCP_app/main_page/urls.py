@@ -67,9 +67,19 @@ urlpatterns = [
     path("breeder/add_pig/", views.breeder_add_pig, name="breeder_add_pig"),
     path("breeder/my_pigs/", views.BreederMyPigsView.as_view(), name="breeder_my_pigs"),
     path(
-        "breeder_pig_detail/<int:pig_id>/",
+        "breeder_pig_detail/<int:pk>/",
         views.BreederPigDetailView.as_view(),
         name="breeder_pig_detail",
+    ),
+    path(
+        "breeder_pig_pedigree/<int:pk>/",
+        views.BreederPigPedigreeView.as_view(),
+        name="breeder_pig_pedigree",
+    ),
+    path(
+        "breeder_pig_update/<int:pk>/",
+        views.BreederPigUpdateView.as_view(),
+        name="breeder_pig_update",
     ),
     path("get_parent_pig_info/", views.get_parent_pig_info, name="get_parent_pig_info"),
     path("get_pig_info/", views.get_pig_info, name="get_pig_info"),
@@ -84,7 +94,6 @@ urlpatterns = [
         views.delete_waiting_pig.as_view(),
         name="delete_waiting_pig",
     ),
-    path("add_breeding/", views.add_breeding.as_view(), name="add_breeding"),
     path(
         "management/",
         TemplateView.as_view(template_name="management.html"),
@@ -94,5 +103,19 @@ urlpatterns = [
         "judging_committee/",
         TemplateView.as_view(template_name="judging_committee.html"),
         name="judging_committee",
+    ),
+    path("add_breeding/", views.AddBreedingView.as_view(), name="add_breeding"),
+    path(
+        "breeding_details/", views.BreedingDetailView.as_view(), name="breeding_details"
+    ),
+    path(
+        "inactive_breeding_list/",
+        views.InactiveBreedingListView.as_view(),
+        name="inactive_breeding_list",
+    ),
+    path(
+        "inactive_breeding_details/<int:breeding_id>/",
+        views.InactiveBreedingDetailsView.as_view(),
+        name="breeding_details",
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

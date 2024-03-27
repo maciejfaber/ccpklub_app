@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "main_page",
     "captcha",
     "whitenoise",
+    "django_cleanup.apps.CleanupConfig",
 ]
 
 AUTH_USER_MODEL = "main_page.User"
@@ -113,7 +114,8 @@ USE_TZ = True
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = EMAIL_BACKEND

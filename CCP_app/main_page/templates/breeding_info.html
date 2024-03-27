@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if breeding %}
+{% if breeding.is_active == True%}
+    <div class="row m-3">
+    <div class="col-md-6">
+        <h1>Informacje o hodowli {{breeding.name}}</h1>
+    <p>Nazwa: {{ breeding.name }}</p>
+    <p>Przydomek: {{ breeding.nickname }}</p>
+    <p>
+      {% if breeding.owners.count == 1 %}
+        Właściciel hodowli: {{ breeding.owners.first.get_full_name }}
+      {% elif breeding.owners.count > 1 %}
+        {% if breeding.owners.first.last_name == breeding.owners.last.last_name %}
+        Właściciele hodowli: {{ breeding.owners.first.first_name }} i {{ breeding.owners.last.get_full_name }}
+        {% else %}
+        Właściciele hodowli: {{ breeding.owners.first.get_full_name }} i {{ breeding.owners.last.get_full_name }}
+        {% endif %}
+      {% endif %}
+    </p>
+     <p>Hodowane rasy: {{ breeding.breeds.all|join:', ' }}</p>
+    <p>Numer rejestracyjny: {{ breeding.registration_number }}</p>
+    <a href="{% url 'breeder_my_pigs' %}" class="btn btn-primary">Moje Świnki</a>
+    <a href="#" class="btn btn-primary">Edytuj dane hodowli</a>
+
+
+    </div>
+    <div class="col-md-6">
+        {% if breeding.banner %}
+            <img src="{{ breeding.banner.url }}" alt="Zdjęcie świnki" class="img-thumbnail">
+        {% endif %}
+    </div>
+    </div>
+
+  {% else %}
+    <div class="row text-center m-3">
+            <p>Twoja hodowla o nazwie <b>{{ breeding.name }}</b> oczekuje na rejestrację.</p>
+            <p>Zostaniesz poinformowany, gdy zarząd zatwierdzi Twój wniosek.</p>
+    </div>
+  {% endif %}
+{% else %}
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center m-4">
+            <h4>Nie posiadasz zarejestrowanej hodowli</h4>
+            <a href="{% url 'add_breeding' %}" class="btn btn-success mt-3">Zarejestruj hodowlę</a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
